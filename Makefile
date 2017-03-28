@@ -1,9 +1,13 @@
 CC = g++
 CFLAGS = -Wall -O2
 
-othello: othello.o board.o
-	$(CC) $(CFLAGS) -o othello othello.o board.o
-	./othello
+all: clean othello run
 
-clean:
+othello: othello.o config.o board.o game.o
+	$(CC) $(CFLAGS) -o othello othello.o config.o board.o game.o
+
+run:
+	./othello initialbrd.txt evalparams.txt
+
+clean: 
 	rm -f *.o *~

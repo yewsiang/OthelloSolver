@@ -1,0 +1,5 @@
+MaxDepth: 9
+MaxBoards: 100000000 
+MaxPlayer: WHITE
+CornerValue: 42 
+EdgeValue: 4 

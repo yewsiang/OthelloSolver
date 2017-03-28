@@ -1,10 +1,15 @@
 #include <iostream>
+#include "config.h"
+#include "game.h"
 
-#include "board.h"
+using namespace std;
 
 int main(int argc, char** argv) {
-	std::cout << "Hello world" << std::endl;
-	Board* x = new Board();
-	x->endGame();
-	x->addSome(10, 40);
+
+	// Retrieve configurations
+	Config cf = Config(argv[1], argv[2]);
+
+	// Setup the game
+	Game game = Game(cf);
+
 }
