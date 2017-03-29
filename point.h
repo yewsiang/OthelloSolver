@@ -1,3 +1,7 @@
+#ifndef POINT_H
+#define POINT_H
+
+#include <string>
 
 using namespace std;
 
@@ -33,3 +37,5 @@ struct point {
     	return getBoardX() + to_string(getBoardY());
     }
 };
+
+#endif
