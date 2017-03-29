@@ -1,22 +1,39 @@
 #include <vector>
+#include "config.h"
 #include "point.h"
+#include "disk.h"
+
+const int DIRECTION[8][2] = {{1, 0}, {1, 1}, {0, 1}, {-1, 1}, {-1, 0}, {-1, -1}, {0, -1}, {1, -1}};
 
 using namespace std;
 
 class Board {
 	public:
-		Board(int width, int height, vector<point> whiteStartingPositions, vector<point> blackStartingPositions);
+		Board(Config config): cf(config), width(cf.getWidth()), height(cf.getHeight()),
+			whiteStartingPositions(cf.getWhiteStartingPositions()),
+			blackStartingPositions(cf.getBlackStartingPositions()) {}; 
 		
-		char getDisk(char x, char y);
-		void flipDisk(char x, char y);
-		void setDisk(char player, char x, char y);
+		void initBoard();
 
-		bool inRange(char x, char y);
-		bool isValidMove(char player, char x, char y);
+		int getDisk(int x, int y);
+		void flipDisk(int x, int y);
+		void setDisk(int player, int x, int y);
+
+		bool inRange(int x, int y);
+		bool isValidMove(int player, int x, int y);
+		void makeMove(int player, int x, int y);
 		bool isGameOver();
 
-		void printBoard();
+		void printBoard(int currentPlayer);
 
 	protected:
-		char* data;
+		// Configurations
+		Config cf;
+		int width;
+		int height;
+		vector<point> whiteStartingPositions;
+		vector<point> blackStartingPositions;
+
+		// Disks data
+		int** data;
 };

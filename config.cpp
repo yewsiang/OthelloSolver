@@ -47,6 +47,8 @@ Config::Config(char* initialBoardFilename, char* paramsFilename) {
     }
 
     // Print Configurations
+    cout << endl << "(Initial Configurations)" << endl;
+
     cout << "Size: " << getWidth() << "," << getHeight() << endl;
     cout << "White: " << endl;
     cout << "Black: " << endl;

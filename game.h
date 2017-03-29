@@ -1,5 +1,6 @@
 #include "config.h"
 #include "board.h"
+#include "disk.h"
 
 using namespace std;
 
@@ -14,5 +15,6 @@ class Game {
 		Board getBoard();
 
 	protected:
+		Config cf;
 		Board board;
 };

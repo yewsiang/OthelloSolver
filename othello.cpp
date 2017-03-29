@@ -11,5 +11,5 @@ int main(int argc, char** argv) {
 
 	// Setup the game
 	Game game = Game(cf);
-
+	game.play();
 }
