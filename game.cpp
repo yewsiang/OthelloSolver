@@ -3,18 +3,32 @@
 
 using namespace std;
 
-Game::Game(Config config) : cf(config), board(config) {}
-
 void Game::play() {
 	board.initBoard();
-	board.printBoard(WHITE);
-	cout << "Gameover: " << board.isGameOver() << endl << endl;
-}
-void Game::nextPlayer() {
-	
-}
-void Game::makeMove(char x, char y) {
 
+	board.printBoard(currentPlayer);
+
+	cout << "Gameover: " << board.isGameOver() << endl;
+
+	vector<point> validMoves = board.getValidMoves(BLACK);
+	for (point p : validMoves) {
+		cout << p.toString() << endl;
+	}
+	cout << "Size: " << validMoves.size() << endl;
+	cout << "Score: " << solver.evaluateBoard(board) << endl;
+	cout << "DL Score: " << solver.evaluateDepthLimitedBoard(board) << endl;
 }
 
-Board Game::getBoard() { return board; } 
+void Game::switchPlayer() {
+	currentPlayer = OPP(currentPlayer);
+}
+
+void Game::makeMove(int x, int y) {
+	board.makeMove(currentPlayer, x, y);
+	switchPlayer();
+	board.printBoard(currentPlayer);
+}
+
+point Game::getBestMove() {
+	return point(0, 0);
+}

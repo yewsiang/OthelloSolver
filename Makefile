@@ -3,8 +3,8 @@ CFLAGS = -Wall -O2
 
 all: clean othello run
 
-othello: othello.o config.o board.o game.o
-	$(CC) $(CFLAGS) -o othello othello.o config.o board.o game.o
+othello: othello.o config.o board.o game.o solver.o
+	$(CC) $(CFLAGS) -o othello othello.o config.o board.o game.o solver.o
 
 run:
 	./othello initialbrd.txt evalparams.txt

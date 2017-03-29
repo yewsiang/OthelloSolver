@@ -23,6 +23,7 @@ void Board::initBoard() {
 	}
 }
 
+// Helpers
 int Board::getDisk(int x, int y) {
 	return data[x][y];
 }
@@ -32,10 +33,11 @@ void Board::flipDisk(int x, int y) {
 void Board::setDisk(int player, int x, int y) {
 	data[x][y] = player;
 }
-
 bool Board::inRange(int x, int y) {
 	return (x >= 0 && x < width && y >= 0 && y < height);
 }
+
+// Checks if player can place disk at (x, y)
 bool Board::isValidMove(int player, int x, int y) {
 	// Not valid if there is a Disk on it already OR if it is out of board's range
 	if (data[x][y] != EMPTY || !inRange(x, y)) {
@@ -68,9 +70,58 @@ bool Board::isValidMove(int player, int x, int y) {
 	}
 	return false;
 }
-void Board::makeMove(int player, int x, int y) {
-	// Assumes that this is a valid move
+
+// Retrieves all valid moves for player
+vector<point> Board::getValidMoves(int player) {
+	vector<point> validMoves;
+	for (int i = 0; i < width; i++) {
+		for (int j = 0; j < height; j++) {
+			if (isValidMove(player, i, j)) {
+				point newPoint = point(i, j);
+				validMoves.push_back(newPoint);
+			}
+		}
+	}
+	return validMoves;
 }
+
+// Places Disk at (x, y) for player & flips opponent Disks. Assume move to be valid.
+void Board::makeMove(int player, int x, int y) {
+	// Go through each direction and test if a Disk can be flipped
+	for (int d = 0; d < 8; d++) { 
+		int changeX = DIRECTION[d][0];
+		int changeY = DIRECTION[d][1];
+		int newX    = x + (2 * changeX);
+		int newY    = y + (2 * changeY);
+
+		// Disk along the direction has to be opponent's disk AND in board's range
+		if (!inRange(newX, newY) || data[x + changeX][y + changeY] != OPP(player)) {
+			continue;
+		}
+		while (inRange(newX, newY)) {
+			// If there is your Disk, reverse and flip the Disks that we've encountered
+			if (data[newX][newY] == player) {
+				newX -= changeX;
+				newY -= changeY;
+				while (newX != x || newY != y) {
+					flipDisk(newX, newY);
+					newX -= changeX;
+					newY -= changeY;
+				}
+				setDisk(player, x, y);
+				break;
+			} 
+			// Cannot have Empty spots along the direction
+			if (data[newX][newY] == EMPTY) {
+				break;
+			}
+			newX += changeX;
+			newY += changeY;
+		}
+	}
+}
+
+// Returns true if game is over (no more valid moves for both players)
 bool Board::isGameOver() {
 	bool moveExists = false;
 	for (int i = 0; i < width; i++) {
