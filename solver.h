@@ -14,6 +14,8 @@ class Solver {
 		
 		// Minimax
 		vector<point> getMinimaxMoves(Board board, int player);
+		int getMinValue(Board board, int player);
+		int getMaxValue(Board board, int player);
 
 		// Scoring
 		int evaluateBoard(Board board);

@@ -1,3 +1,0 @@
-Size: 4,4
-White: { b2,c3 }
-Black: { c2,b3 }

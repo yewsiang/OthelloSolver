@@ -15,6 +15,7 @@ class Board {
 		Board(Config config): cf(config), width(cf.getWidth()), height(cf.getHeight()),
 			whiteStartingPositions(cf.getWhiteStartingPositions()),
 			blackStartingPositions(cf.getBlackStartingPositions()) {}; 
+		Board(const Board &b);
 		
 		// Intialization
 		void initBoard();

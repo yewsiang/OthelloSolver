@@ -2,6 +2,21 @@
 
 using namespace std;
 
+// Copy constructor
+Board::Board(const Board &b): cf(b.cf) {
+	width = b.width;
+	height = b.height;
+	data = new int*[width];
+
+	for (int i = 0; i < width; i++) {
+		data[i] = new int[height];
+
+		for (int j = 0; j < height; j++) {
+			data[i][j] = b.data[i][j];
+		}
+	}
+}
+
 void Board::initBoard() {
 	// Initialize 2D Array
 	data = new int*[width];

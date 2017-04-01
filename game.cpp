@@ -6,17 +6,24 @@ using namespace std;
 void Game::play() {
 	board.initBoard();
 
-	board.printBoard(currentPlayer);
+	/*board.printBoard(BLACK);
 
-	cout << "Gameover: " << board.isGameOver() << endl;
-
-	vector<point> validMoves = board.getValidMoves(BLACK);
+	vector<point> validMoves = solver.getMinimaxMoves(board, BLACK);
 	for (point p : validMoves) {
 		cout << p.toString() << endl;
+	}*/
+
+	while (!board.isGameOver()) {
+		board.printBoard(currentPlayer);
+		vector<point> validMoves = solver.getMinimaxMoves(board, currentPlayer);
+		if (validMoves.size() == 0) {
+			switchPlayer();
+		} else {
+			point nextMove = validMoves[0];
+			board.makeMove(currentPlayer, nextMove.x, nextMove.y);
+			switchPlayer();
+		}
 	}
-	cout << "Size: " << validMoves.size() << endl;
-	cout << "Score: " << solver.evaluateBoard(board) << endl;
-	cout << "DL Score: " << solver.evaluateDepthLimitedBoard(board) << endl;
 }
 
 void Game::switchPlayer() {
