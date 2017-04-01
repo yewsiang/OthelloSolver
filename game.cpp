@@ -1,3 +1,6 @@
+
+#include <ctime>
+#include <iomanip>
 #include "disk.h"
 #include "game.h"
 
@@ -13,7 +16,13 @@ void Game::play() {
 		cout << p.toString() << endl;
 	}*/
 
+	switchPlayer();
+
+	// Start timer 
+	clock_t begin = clock();
+
 	while (!board.isGameOver()) {
+		// Constantly execute minimax move
 		board.printBoard(currentPlayer);
 		vector<point> validMoves = solver.getMinimaxMoves(board, currentPlayer);
 		if (validMoves.size() == 0) {
@@ -24,6 +33,21 @@ void Game::play() {
 			switchPlayer();
 		}
 	}
+	// End timer
+	clock_t end = clock();
+  	double elapsed_secs = double(end - begin) / CLOCKS_PER_SEC;
+	board.printBoard(currentPlayer);
+
+	// Determine who won
+	int score = solver.evaluateBoard(board);
+	if (score < 0) {
+		cout << "Result: WHITE wins" << endl;
+	} else if (score > 0) {
+		cout << "Result: BLACK wins" << endl;
+	} else {
+		cout << "Result: DRAW" << endl;
+	}
+	cout << "Time taken = " << fixed << setprecision(1) << elapsed_secs << " seconds" << endl;
 }
 
 void Game::switchPlayer() {

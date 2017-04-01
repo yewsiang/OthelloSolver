@@ -150,6 +150,7 @@ bool Board::isGameOver() {
 void Board::printBoard(int currentPlayer) {
 	// Print Horizontal labels
 	string leftMargin = "    "; // For pretty printing
+	cout << endl << leftMargin << "     " << ((currentPlayer == BLACK) ? "BLACK (X)" : "WHITE (O)");
 	cout << endl << leftMargin << "   ";
 	for (int i = 0; i < width; i++) {
 		cout << string(1, 'A' + i) << " ";
