@@ -4,7 +4,7 @@
 using namespace std;
 
 // Assume game is not over
-vector<point> Solver::getMinimaxMoves(Board board, int player) {
+vector<point> Solver::getMinimaxMoves(Board board, int player, int depth) {
 	vector<point> validMoves = board.getValidMoves(player);
 	if (validMoves.size() == 0) {
 		return vector<point>();
@@ -15,8 +15,8 @@ vector<point> Solver::getMinimaxMoves(Board board, int player) {
 	for (point validMove : validMoves) {
 		Board newBoard = board;
 		newBoard.makeMove(player, validMove.x, validMove.y);
-		int newValue = (player == BLACK) ? getMinValue(newBoard, OPP(player)) :
-										   getMaxValue(newBoard, OPP(player));
+		int newValue = (player == BLACK) ? getMinValue(newBoard, OPP(player), depth - 1) :
+										   getMaxValue(newBoard, OPP(player), depth - 1);
 
 		if (player == BLACK && newValue > value) {
 			// Clear previous moves
@@ -40,57 +40,53 @@ vector<point> Solver::getMinimaxMoves(Board board, int player) {
 	return minimaxMoves;
 }
 
-int Solver::getMinValue(Board board, int player) {
+int Solver::getMinValue(Board board, int player, int depth) {
+	// Evaluate boards
 	if (board.isGameOver()) {
-
-		//board.printBoard(player);
-
 		return evaluateBoard(board);
+	} else if (depth == 0 || boardsSearched >= maxBoards) {
+		return evaluateDepthLimitedBoard(board);
 	}
-	//cout << "Player: " << ((player == BLACK) ? "BLACK. " : "WHITE. ") << "MIN" << endl;
-	//board.printBoard(player);
 
 	vector<point> validMoves = board.getValidMoves(player);
 	if (validMoves.size() == 0) {
-		return getMaxValue(board, OPP(player));
+		// Skip to next player if no moves
+		return getMaxValue(board, OPP(player), depth);
 	}
 
 	int value = INT_MAX;
 	for (point validMove : validMoves) {
+		boardsSearched++;
 		Board newBoard = board;
 		newBoard.makeMove(player, validMove.x, validMove.y);
 
-		//newBoard.printBoard(OPP(player));
-
-		int newValue = getMaxValue(newBoard, OPP(player));
+		int newValue = getMaxValue(newBoard, OPP(player), depth - 1);
 		value = min(value, newValue);
 	}
 	return value;
 }
 
-int Solver::getMaxValue(Board board, int player) {
+int Solver::getMaxValue(Board board, int player, int depth) {
+	// Evaluate boards
 	if (board.isGameOver()) {
-
-		//board.printBoard(player);
-
 		return evaluateBoard(board);
+	} else if (depth == 0 || boardsSearched >= maxBoards) {
+		return evaluateDepthLimitedBoard(board);
 	}
-	//cout << "Player: " << ((player == BLACK) ? "BLACK. " : "WHITE. ") << "MAX" << endl;
-	//board.printBoard(player);
 
 	vector<point> validMoves = board.getValidMoves(player);
 	if (validMoves.size() == 0) {
-		return getMinValue(board, OPP(player));
+		// Skip to next player if no moves
+		return getMinValue(board, OPP(player), depth);
 	}
 
 	int value = INT_MIN;
 	for (point validMove : validMoves) {
+		boardsSearched++;
 		Board newBoard = board;
 		newBoard.makeMove(player, validMove.x, validMove.y);
 
-		//newBoard.printBoard(OPP(player));
-
-		int newValue = getMinValue(newBoard, OPP(player));
+		int newValue = getMinValue(newBoard, OPP(player), depth - 1);
 		value = max(value, newValue);
 	}
 	return value;
@@ -112,6 +108,9 @@ int Solver::evaluateBoard(Board board) {
 }
 
 int Solver::evaluateDepthLimitedBoard(Board board) {
+	// Would not have searched entire space if this evaluation function is used
+	searchedEntireSpace = false;
+
 	int scoreWhite = 0;
 	int scoreBlack = 0;
 	int incrementBy = 1;
@@ -138,3 +137,7 @@ int Solver::evaluateDepthLimitedBoard(Board board) {
 	}
 	return scoreBlack - scoreWhite;
 }
+
+// Helpers
+bool Solver::getSearchedEntireSpace() { return searchedEntireSpace; }
+int Solver::getBoardsSearched() { return boardsSearched; }

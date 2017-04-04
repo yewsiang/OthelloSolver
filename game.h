@@ -7,16 +7,14 @@ using namespace std;
 
 class Game {
 	public:
-		Game(Config config) : cf(config), board(config), solver(config), currentPlayer(BLACK) {}
+		Game(Config cf) : maxDepth(cf.getMaxDepth()), board(cf), solver(cf), currentPlayer(BLACK) {}
 		
 		void play();
 		void switchPlayer();
-		void makeMove(int x, int y);
-		point getBestMove();
 
 	protected:
 		// Configurations
-		Config cf;
+		int maxDepth;
 
 		// State of game
 		Board board;
