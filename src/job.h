@@ -16,7 +16,7 @@ typedef struct {
 	int parentId;
 
 	// State of Job
-	Board* board;
+	//Board* board;
 	int player;
 	int depthLeft;
 } Job;
@@ -36,6 +36,7 @@ CompletedJob executeJob(Job* job);
 vector<CompletedJob> executeAllJobs(vector<Job>* job);
 
 // Communications
+void waitForJob(string jobType, int id);
 void masterSendJobs(deque<Job>* jobs, int numProcs);
 void slaveReceiveJobs(vector<Job>* jobs);
 void slaveSendCompletedJobs(vector<CompletedJob>* jobs);

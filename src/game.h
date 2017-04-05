@@ -9,7 +9,7 @@ class Game {
 	public:
 		Game(Config cf) : maxDepth(cf.getMaxDepth()), board(cf), solver(cf), currentPlayer(BLACK) {}
 		
-		void play();
+		void play(int numProcs);
 		void switchPlayer();
 
 	protected:

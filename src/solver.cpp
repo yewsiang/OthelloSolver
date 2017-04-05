@@ -50,8 +50,22 @@ vector<point> Solver::getMinimaxMoves(Board board, int player, int depth) {
  * Master will distribute Jobs almost equally amongst Slaves before starting on Jobs itself.
  * After which, Master will wait for CompletedJobs to return from Slaves.
  */
-vector<point> Solver::getParallelMinimaxMoves(Board board, int player, int depth) {  	
+vector<point> Solver::getParallelMinimaxMoves(Board board, int player, int depth, int numProcs) {  	
+	vector<point> validMoves = board.getValidMoves(player);
 	vector<point> minimaxMoves;
+
+	// Initialize jobs
+	deque<Job> jobs;
+	int numResults = validMoves.size();
+	int results[numResults];
+	for (int i = 0; i < numResults; i++) {
+		Job newJob = {i, 0, 0, 0};
+		jobs.push_back(newJob);
+	}
+
+	// Send jobs to the rest of the processors
+	masterSendJobs(&jobs, numProcs);
+
 	return minimaxMoves;
 }
 

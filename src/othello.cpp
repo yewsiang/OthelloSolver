@@ -19,10 +19,10 @@ int main(int argc, char** argv) {
 
 		// Setup the game
 		Game game = Game(cf);
-		game.play();
+		game.play(numProcs);
 
 	} else {
-		//waitForJob();
+		waitForJob("PARALLEL_MINIMAX", id);
 	}
 
 	MPI_Finalize();

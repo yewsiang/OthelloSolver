@@ -6,7 +6,7 @@
 
 using namespace std;
 
-void Game::play() {
+void Game::play(int numProcs) {
 	board.initBoard();
 
 	// TODO: REMOVE
@@ -15,12 +15,15 @@ void Game::play() {
 	// Start timer 
 	clock_t begin = clock();
 	
-	while (!board.isGameOver()) {
+	int i = 0;
+	while (i < 3 && !board.isGameOver()) {
+		i++;
+
 		// Constantly execute minimax move
-		solver.getParallelMinimaxMoves(board, currentPlayer, maxDepth);
-		/*
 		board.printBoard(currentPlayer);
-		vector<point> validMoves = solver.getMinimaxMoves(board, currentPlayer, maxDepth);
+
+		vector<point> validMoves = solver.getParallelMinimaxMoves(board, currentPlayer, maxDepth, numProcs);
+		//vector<point> validMoves = solver.getMinimaxMoves(board, currentPlayer, maxDepth);
 		if (validMoves.size() == 0) {
 			switchPlayer();
 		} else {
@@ -28,7 +31,6 @@ void Game::play() {
 			board.makeMove(currentPlayer, nextMove.x, nextMove.y);
 			switchPlayer();
 		}
-		*/
 	}
 
 	// End timer

@@ -1,5 +1,6 @@
 
 #include <mpi.h>
+#include <deque>
 #include <vector>
 #include "job.h"
 #include "point.h"
@@ -18,7 +19,7 @@ class Solver {
 		// Minimax
 		vector<point> getBestMoves(Board board, int player, int depth);
 		vector<point> getMinimaxMoves(Board board, int player, int depth);
-		vector<point> getParallelMinimaxMoves(Board board, int player, int depth);
+		vector<point> getParallelMinimaxMoves(Board board, int player, int depth, int numProcs);
 		int getMinValue(Board board, int player, int depth);
 		int getMaxValue(Board board, int player, int depth);
 

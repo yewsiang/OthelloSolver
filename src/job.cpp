@@ -22,6 +22,35 @@ vector<CompletedJob> executeAllJobs(vector<Job> job) {
 	return completedJobs;
 }
 
+
+void waitForJob(string jobType, int id) {
+	if (jobType.compare("PARALLEL_MINIMAX") == 0) {
+		vector<Job> jobsToWork;
+		vector<CompletedJob> completedJobs;
+
+		slaveReceiveJobs(&jobsToWork);
+		
+	    printf("Process %d received jobs from process 0:\n", id);
+	    for (int i = 0; i < jobsToWork.size(); i++) {
+	    	//printJob(jobsToWork[i], world_rank);
+	    }
+	    /*
+	    // Work on problems
+	    for (int i = 0; i < jobsToWork.size(); i++) {
+  			Job currentJob = jobsToWork[i];
+  			while (!isJobFinished(currentJob)) {
+  				executeJob(&currentJob);
+  			}
+  			CompletedJob cj = {currentJob.number};
+  			completedJobs.push_back(cj);
+  			printf("Process %d finished Job with Parent %d. Result: %d\n", 
+  				world_rank, currentJob.parentNumber, currentJob.number);
+  		}
+		
+	    slaveSendCompletedJobs(&completedJobs);*/
+	}
+}
+
 void masterSendJobs(deque<Job>* jobs, int numProcs) {
 	int numJobs = jobs->size();
 	for (int i = 1; i < numProcs; i++) {
