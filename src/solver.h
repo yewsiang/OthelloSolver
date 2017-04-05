@@ -1,5 +1,7 @@
 
+#include <mpi.h>
 #include <vector>
+#include "job.h"
 #include "point.h"
 #include "board.h"
 #include "config.h"
@@ -14,7 +16,9 @@ class Solver {
 			searchedEntireSpace(true), boardsSearched(0) {}
 		
 		// Minimax
+		vector<point> getBestMoves(Board board, int player, int depth);
 		vector<point> getMinimaxMoves(Board board, int player, int depth);
+		vector<point> getParallelMinimaxMoves(Board board, int player, int depth);
 		int getMinValue(Board board, int player, int depth);
 		int getMaxValue(Board board, int player, int depth);
 

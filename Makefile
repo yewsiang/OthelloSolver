@@ -1,13 +1,12 @@
-CC = g++
-CFLAGS = -Wall -O2
+MPICC?=mpic++
 
 all: clean othello run
 
-othello: othello.o config.o board.o game.o solver.o
-	$(CC) $(CFLAGS) -o othello othello.o config.o board.o game.o solver.o
+othello: src/*.cpp 
+	${MPICC} -o bin/othello src/*.cpp 
 
 run:
-	./othello config/initialbrd.txt config/evalparams.txt
+	mpirun -np 4 ./bin/othello config/initialbrd4.txt config/evalparams.txt
 
 clean: 
-	rm -f *.o *~
+	#rm bin/othello

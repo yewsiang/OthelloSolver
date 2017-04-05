@@ -14,9 +14,11 @@ void Game::play() {
 
 	// Start timer 
 	clock_t begin = clock();
-
+	
 	while (!board.isGameOver()) {
 		// Constantly execute minimax move
+		solver.getParallelMinimaxMoves(board, currentPlayer, maxDepth);
+		/*
 		board.printBoard(currentPlayer);
 		vector<point> validMoves = solver.getMinimaxMoves(board, currentPlayer, maxDepth);
 		if (validMoves.size() == 0) {
@@ -26,7 +28,9 @@ void Game::play() {
 			board.makeMove(currentPlayer, nextMove.x, nextMove.y);
 			switchPlayer();
 		}
+		*/
 	}
+
 	// End timer
 	clock_t end = clock();
   	double elapsed_secs = double(end - begin) / CLOCKS_PER_SEC;

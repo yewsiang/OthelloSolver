@@ -3,7 +3,11 @@
 
 using namespace std;
 
-// Assume game is not over
+vector<point> Solver::getBestMoves(Board board, int player, int depth) {
+	return getMinimaxMoves(board, player, depth);
+}
+
+// Assume game is not over, get the minimax moves
 vector<point> Solver::getMinimaxMoves(Board board, int player, int depth) {
 	vector<point> validMoves = board.getValidMoves(player);
 	if (validMoves.size() == 0) {
@@ -37,6 +41,17 @@ vector<point> Solver::getMinimaxMoves(Board board, int player, int depth) {
 
 		cout << "Current move = " << validMove.toString() << ". Value = " << newValue << endl;
 	}
+	return minimaxMoves;
+}
+
+/*
+ * Parallel version of getMinimaxMoves
+ *
+ * Master will distribute Jobs almost equally amongst Slaves before starting on Jobs itself.
+ * After which, Master will wait for CompletedJobs to return from Slaves.
+ */
+vector<point> Solver::getParallelMinimaxMoves(Board board, int player, int depth) {  	
+	vector<point> minimaxMoves;
 	return minimaxMoves;
 }
 
