@@ -7,7 +7,7 @@ using namespace std;
 
 class Game {
 	public:
-		Game(Config cf) : maxDepth(cf.getMaxDepth()), board(cf), solver(cf), currentPlayer(BLACK) {}
+		Game(Config cf);
 		
 		void play(int numProcs);
 		void switchPlayer();

@@ -12,13 +12,12 @@ using namespace std;
 
 class Board {
 	public:
-		Board(Config config): cf(config), width(cf.getWidth()), height(cf.getHeight()),
-			whiteStartingPositions(cf.getWhiteStartingPositions()),
-			blackStartingPositions(cf.getBlackStartingPositions()) {}; 
+		Board(int w, int h); 
 		Board(const Board &b);
 		
 		// Intialization
 		void initBoard();
+		void initBoard(vector<point> whiteStarting, vector<point> blackStarting);
 		
 		// Helpers
 		int getDisk(int x, int y);
@@ -38,11 +37,8 @@ class Board {
 
 	protected:
 		// Configurations
-		Config cf;
 		int width;
 		int height;
-		vector<point> whiteStartingPositions;
-		vector<point> blackStartingPositions;
 
 		// Disks data
 		int** data;

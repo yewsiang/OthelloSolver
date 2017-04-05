@@ -6,9 +6,15 @@
 
 using namespace std;
 
-void Game::play(int numProcs) {
-	board.initBoard();
+Game::Game(Config cf) : maxDepth(cf.getMaxDepth()), 
+						board(cf.getWidth(), cf.getHeight()), 
+						solver(cf), 
+						currentPlayer(BLACK) {
+    printf("HELLO WORLD\n\n");
+	board.initBoard(cf.getWhiteStartingPositions(), cf.getBlackStartingPositions());
+}
 
+void Game::play(int numProcs) {
 	// TODO: REMOVE
 	switchPlayer();
 

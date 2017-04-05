@@ -2,8 +2,12 @@
 
 using namespace std;
 
+Board::Board(int w, int h) : width(w), height(h) {
+	initBoard();
+}
+
 // Copy constructor
-Board::Board(const Board &b): cf(b.cf) {
+Board::Board(const Board &b) {
 	width = b.width;
 	height = b.height;
 	data = new int*[width];
@@ -28,12 +32,16 @@ void Board::initBoard() {
 			data[i][j] = EMPTY;
 		}
 	}
+}
+
+void Board::initBoard(vector<point> whiteStarting, vector<point> blackStarting) {
+	initBoard();
 
 	// Input White & Black starting positions
-	for (point p : whiteStartingPositions) {
+	for (point p : whiteStarting) {
 		setDisk(WHITE, p.x, p.y);
 	}
-	for (point p : blackStartingPositions) {
+	for (point p : blackStarting) {
 		setDisk(BLACK, p.x, p.y);
 	}
 }
