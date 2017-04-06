@@ -67,10 +67,12 @@ vector<point> Solver::getParallelMinimaxMoves(Board board, int player, int depth
 	int numResults = validMoves.size();
 	int results[numResults];
 	for (int i = 0; i < numResults; i++) {
+		results[i] = (player == BLACK) ? INT_MIN : INT_MAX;
 		Board newBoard = board;
 		newBoard.makeMove(player, validMoves[i].x, validMoves[i].y);
 
-		Job newJob = {i, i, board.getWidth(), board.getHeight(), OPP(player), depth - 1, &newBoard};
+		Job newJob = {i, width, height, maxBoards, cornerValue, edgeValue, 
+			OPP(player), depth - 1, &newBoard};
 		jobs.push_back(newJob);
 		boards.push_back(newBoard);
 	}
@@ -81,7 +83,7 @@ vector<point> Solver::getParallelMinimaxMoves(Board board, int player, int depth
 	printf("=== Problem Size BEFORE splitting: %d ===\n", jobs.size());
 
 	// Split original Jobs into more Jobs before sending to divide more evenly
-	splitJobs(&jobs, &boards, numProcs, 3);
+	splitJobs(&jobs, &boards, numProcs, 4);
 
 	printf("=== Problem Size AFTER splitting: %d ===\n", jobs.size());
 	/*
@@ -99,7 +101,25 @@ vector<point> Solver::getParallelMinimaxMoves(Board board, int player, int depth
 	masterSendJobs(&jobs, &boards, numProcs);
 
 	// Collect results from Slaves
-	//masterReceiveJobs();
+	vector<CompletedJob> completedJobs;
+	masterReceiveCompletedJobs(&completedJobs, numProcs);
+
+	printf("Completed Jobs Size: %d\n", completedJobs.size());
+	for (int i = 0; i < completedJobs.size(); i++) {
+		int moveId = completedJobs[i].moveId;
+		int value = completedJobs[i].moveValue;
+		results[moveId] = (player == BLACK) ? max(results[moveId], value) :
+											  min(results[moveId], value);
+
+		printf("Master received Job with Parent %d [Value: %d]\n", 
+			completedJobs[i].moveId, completedJobs[i].moveValue);
+	}
+
+	printf("Valid moves: ");
+	for (int i = 0; i < numResults; i++) {
+		printf("[%d]", results[i]);
+	}
+	printf("\n");
 
 	printf("======== PARALLEL MINIMAX MOVES END ========\n");
 

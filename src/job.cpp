@@ -19,8 +19,8 @@ void splitJobs(deque<Job>* jobs, deque<Board>* boards, int numProcs, int jobsPer
 
 			// Package into Job and send it back into Job queue
 			Job newJob = {
-				currentJob.id, currentJob.parentId, 
-				currentJob.width, currentJob.height, 
+				currentJob.moveId, currentJob.width, currentJob.height, 
+				currentJob.maxBoards, currentJob.cornerValue, currentJob.edgeValue,
 				OPP(currentJob.player), currentJob.depthLeft - 1, &newBoard
 			};
 			jobs->push_back(newJob);
@@ -31,7 +31,14 @@ void splitJobs(deque<Job>* jobs, deque<Board>* boards, int numProcs, int jobsPer
 
 // Compute the minimaxScores of each move of the board in a Job
 CompletedJob executeJob(Job* job) {
-	CompletedJob cj;
+	Solver solver = Solver(job->width, job->height, job->depthLeft, 
+		job->maxBoards, job->cornerValue, job->edgeValue);
+	int player = job->player;
+	int depth = job->depthLeft;
+	Board* currentBoard = job->board;
+	int value = (player == BLACK) ? solver.getMaxValue(*currentBoard, player, depth) :
+									solver.getMinValue(*currentBoard, player, depth);
+	CompletedJob cj = {job->moveId, value, solver.getBoardsSearched()};
 	return cj;
 }
 
@@ -44,39 +51,6 @@ vector<CompletedJob> executeAllJobs(vector<Job> job) {
 	return completedJobs;
 }
 
-
-void waitForJob(string jobType, int id) {
-	if (jobType.compare("PARALLEL_MINIMAX") == 0) {
-		vector<Job> jobsToWork;
-		vector<Board> boards;
-
-		slaveReceiveJobs(&jobsToWork);
-		
-	    printf("Process %d received jobs from process 0:\n", id);
-	    for (int i = 0; i < jobsToWork.size(); i++) {
-	    	Job currentJob = jobsToWork[i];
-	    	Board currentBoard = *(currentJob.board);
-	    	//Board currentBoard = boards[i];
-
-	    	printf("ID: %d [PLAYER: %d][LEFT: %d] \n", 
-				currentJob.id, currentJob.player, currentJob.depthLeft);
-	    	currentBoard.printBoard(currentJob.player);
-	    }
-	
-	    // Work on problems
-	    /*vector<CompletedJob> completedJobs;
-	    for (int i = 0; i < jobsToWork.size(); i++) {
-  			Job currentJob = jobsToWork[i];
-
-  			//CompletedJob cj = {currentJob.number};
-  			//completedJobs.push_back(cj);
-  			//printf("Process %d finished Job with Parent %d. Result: %d\n", 
-  			//	world_rank, currentJob.parentNumber, currentJob.number);
-  		}*/
-		
-	    //slaveSendCompletedJobs(&completedJobs);
-	}
-}
 
 void masterSendJobs(deque<Job>* jobs, deque<Board>* boards, int numProcs) {
 	printf("==== MASTER SENDING JOBS =========\n");
@@ -122,7 +96,7 @@ void masterSendJobs(deque<Job>* jobs, deque<Board>* boards, int numProcs) {
 	printf("==== MASTER SENDING JOBS ENDS ====\n");
 }
 
-void slaveReceiveJobs(vector<Job>* jobs, vector<Board>* boards) {
+void slaveReceiveJobs(vector<Job>* jobs) {
 	// Probe for new incoming walkers
 	MPI_Status status;
 	MPI_Probe(0, 0, MPI_COMM_WORLD, &status);
@@ -160,13 +134,39 @@ void slaveReceiveJobs(vector<Job>* jobs, vector<Board>* boards) {
 			}
 		}
 		currentJob->board = newBoard;
-		//boards->push_back(*newBoard);
+	}
+}
+
+void waitForJob(string jobType, int id) {
+	if (jobType.compare("PARALLEL_MINIMAX") == 0) {
+		vector<Job> jobsToWork;
+
+		slaveReceiveJobs(&jobsToWork);
+		
+	    printf("Process %d received jobs from process 0:\n", id);
+	    for (int i = 0; i < jobsToWork.size(); i++) {
+	    	Job currentJob = jobsToWork[i];
+	    	Board currentBoard = *(currentJob.board);
+
+	    	printf("ID: %d [PLAYER: %d][LEFT: %d] \n", 
+				currentJob.moveId, currentJob.player, currentJob.depthLeft);
+	    	currentBoard.printBoard(currentJob.player);
+	    }
+	
+	    // Work on problems
+	    vector<CompletedJob> completedJobs = executeAllJobs(jobsToWork);
+	    for (int i = 0; i < completedJobs.size(); i++) {
+  			printf("Process %d finished Job with Parent %d [Value: %d]\n", 
+  				id, completedJobs[i].moveId, completedJobs[i].moveValue);
+  		}
+		
+	    slaveSendCompletedJobs(&completedJobs);
 	}
 }
 
 void slaveSendCompletedJobs(vector<CompletedJob>* jobs) {
 	// Send back to Processor 0 for results to be merged
-	MPI_Send((void*)jobs->data(), jobs->size() * sizeof(Job), 
+	MPI_Send((void*)jobs->data(), jobs->size() * sizeof(CompletedJob), 
 		MPI_BYTE, 0, 0, MPI_COMM_WORLD);
 	jobs->clear();
 }
@@ -182,7 +182,7 @@ void masterReceiveCompletedJobs(vector<CompletedJob>* jobs, int numProcs) {
 		// Resize your incoming walker buffer based on how much data is being received
 		int incoming_size;
 		MPI_Get_count(&status, MPI_BYTE, &incoming_size);
-		incomingCompletedJobs.resize(incoming_size / sizeof(Job));
+		incomingCompletedJobs.resize(incoming_size / sizeof(CompletedJob));
 
 		MPI_Recv((void*)incomingCompletedJobs.data(), incoming_size, MPI_BYTE, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, 
 			MPI_STATUS_IGNORE);

@@ -1,4 +1,7 @@
 
+#ifndef JOB_H
+#define JOB_H
+
 #include <mpi.h>
 #include <deque>
 #include <vector>
@@ -6,19 +9,20 @@
 #include "config.h"
 #include "board.h"
 #include "point.h"
-
-#ifndef JOB_H
-#define JOB_H
+#include "solver.h"
 
 using namespace std;
 
 typedef struct {
-	int id;
-	int parentId;
+	// To identify the original move ID
+	int moveId;
 
 	// Configurations
 	int width;
 	int height;
+	int maxBoards;
+	int cornerValue;
+	int edgeValue;
 
 	// State of Job
 	int player;
@@ -27,12 +31,13 @@ typedef struct {
 } Job;
 
 typedef struct {
-	int id;
-	int parentId;
+	// To identify the original move ID
+	int moveId;
 
-	// Useful values
-	vector<point> points;
-	vector<int> minimaxScores;
+	// Computed values
+	int moveValue;
+	int boardsAssessed;
+
 } CompletedJob;
 
 // Job-specific functions
@@ -43,7 +48,7 @@ vector<CompletedJob> executeAllJobs(vector<Job>* job);
 // Communications
 void waitForJob(string jobType, int id);
 void masterSendJobs(deque<Job>* jobs, deque<Board>* boards, int numProcs);
-void slaveReceiveJobs(vector<Job>* jobs, vector<Board>* boards);
+void slaveReceiveJobs(vector<Job>* jobs);
 void slaveSendCompletedJobs(vector<CompletedJob>* jobs);
 void masterReceiveCompletedJobs(vector<CompletedJob>* jobs, int numProcs);
 

@@ -7,13 +7,20 @@
 #include "board.h"
 #include "config.h"
 
+#ifndef SOLVER_H
+#define SOLVER_H
+
 using namespace std;
 
 class Solver {
 	public:
-		Solver(Config config) : cf(config), width(config.getWidth()), height(config.getHeight()),
-			maxDepth(cf.getMaxDepth()), maxBoards(config.getMaxBoards()), 
-			cornerValue(config.getCornerValue()), edgeValue(config.getEdgeValue()),
+		Solver(Config cf) : width(cf.getWidth()), height(cf.getHeight()),
+			maxDepth(cf.getMaxDepth()), maxBoards(cf.getMaxBoards()), 
+			cornerValue(cf.getCornerValue()), edgeValue(cf.getEdgeValue()),
+			searchedEntireSpace(true), boardsSearched(0) {}
+		Solver(int w, int h, int maxD, int maxB, int cornerV, int edgeV) :
+			width(w), height(h), maxDepth(maxD), maxBoards(maxB), 
+			cornerValue(cornerV), edgeValue(edgeV), 
 			searchedEntireSpace(true), boardsSearched(0) {}
 		
 		// Minimax
@@ -33,7 +40,6 @@ class Solver {
 
 	protected:
 		// Configurations
-		Config cf;
 		int width;
 		int height;
 		int maxDepth;
@@ -45,3 +51,5 @@ class Solver {
 		bool searchedEntireSpace;
 		int boardsSearched;
 };
+
+#endif
