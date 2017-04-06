@@ -38,6 +38,7 @@ typedef struct {
 	int parentId;
 
 	// Computed values
+	int player;
 	int moveValue;
 	int boardsAssessed;
 
@@ -50,11 +51,12 @@ CompletedJob executeJob(Job* job);
 vector<CompletedJob> executeAllJobs(vector<Job>* job);
 
 // Communications
-void waitForJob(string jobType, int id);
+void slaveWaitForJob(string jobType, int id);
 void masterSendJobs(deque<Job>* jobs, deque<Board>* boards, int numProcs);
 void slaveReceiveJobs(vector<Job>* jobs);
 void masterWorkOnJobs(deque<Job>* jobs, deque<Board>* boards, deque<CompletedJob>* waitingJobs);
 void slaveSendCompletedJobs(vector<CompletedJob>* jobs);
 void masterReceiveCompletedJobs(deque<CompletedJob>* jobs, int numProcs);
+void masterRewindMinimaxStack(deque<CompletedJob>* jobs);
 
 #endif

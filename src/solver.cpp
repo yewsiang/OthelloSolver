@@ -65,11 +65,8 @@ vector<point> Solver::getParallelMinimaxMoves(Board board, int player, int depth
 	deque<Job> jobs;
 	deque<Board> boards;
 	deque<CompletedJob> waitingJobs;
-	int numResults = validMoves.size();
-	int results[numResults];
 
-	for (int i = 0; i < numResults; i++) {
-		results[i] = (player == BLACK) ? INT_MIN : INT_MAX;
+	for (int i = 0; i < validMoves.size(); i++) {
 		Board newBoard = board;
 		newBoard.makeMove(player, validMoves[i].x, validMoves[i].y);		
 
@@ -83,26 +80,24 @@ vector<point> Solver::getParallelMinimaxMoves(Board board, int player, int depth
 
 		// Setup waiting jobs to combine results when Slaves are done
 		CompletedJob waitingJob = {
-			i, -1, ((OPP(player) == BLACK) ? INT_MIN : INT_MAX), 0
+			i, -1, OPP(player), ((OPP(player) == BLACK) ? INT_MIN : INT_MAX), 0
 		};
 		waitingJobs.push_back(waitingJob);
 	}
 
-	// TODO: Remove
-	minimaxMoves.push_back(validMoves[0]);
-
 	printf("=== Problem Size BEFORE splitting: %d ===\n", jobs.size());
 
 	// Split original Jobs into more Jobs before sending to divide more evenly
-	splitJobs(&jobs, &boards, &waitingJobs, numProcs, 3);
+	splitJobs(&jobs, &boards, &waitingJobs, numProcs, 5);
 
 	printf("=== Problem Size AFTER splitting: %d ===\n", jobs.size());
 	
 	for (int i = 0; i < waitingJobs.size(); i++) {
 		CompletedJob cj = waitingJobs[i];
 		Board currentBoard = boards[i];
-		printf("WAITING [ID: %d][PARENT: %d] [VALUE: %d] [BOARDS: %d]\n", 
-			cj.id, cj.parentId, cj.moveValue, cj.boardsAssessed);
+		printf("WAITING [ID: %d][PARENT: %d] [%s] [VALUE: %d] [BOARDS: %d]\n", 
+			cj.id, cj.parentId, (cj.player == BLACK) ? "BLACK" : "WHITE",
+			cj.moveValue, cj.boardsAssessed);
 		//currentBoard.printBoard(cj.player);
 	}
 
@@ -118,16 +113,52 @@ vector<point> Solver::getParallelMinimaxMoves(Board board, int player, int depth
 	for (int i = 0; i < waitingJobs.size(); i++) {
 		CompletedJob cj = waitingJobs[i];
 		Board currentBoard = boards[i];
-		printf("FINISHED [ID: %d][PARENT: %d] [VALUE: %d] [BOARDS: %d]\n", 
-			cj.id, cj.parentId, cj.moveValue, cj.boardsAssessed);
+		printf("FINISHED [ID: %d][PARENT: %d] [%s] [VALUE: %d] [BOARDS: %d]\n", 
+			cj.id, cj.parentId, (cj.player == BLACK) ? "BLACK" : "WHITE", 
+			cj.moveValue, cj.boardsAssessed);
 		//currentBoard.printBoard(cj.player);
 	}
 
-	printf("Valid moves: ");
-	for (int i = 0; i < numResults; i++) {
-		printf("[%d]", results[i]);
+	// Combine results from Slave processes
+	masterRewindMinimaxStack(&waitingJobs);
+
+	for (int i = 0; i < waitingJobs.size(); i++) {
+		CompletedJob cj = waitingJobs[i];
+		Board currentBoard = boards[i];
+		printf("FINISHED [ID: %d][PARENT: %d] [%s] [VALUE: %d] [BOARDS: %d]\n", 
+			cj.id, cj.parentId, (cj.player == BLACK) ? "BLACK" : "WHITE", 
+			cj.moveValue, cj.boardsAssessed);
+		//currentBoard.printBoard(cj.player);
 	}
-	printf("\n");
+
+	// Get the best moves
+	int bestValue = (player == BLACK) ? INT_MIN : INT_MAX;
+	for (int i = 0; i < waitingJobs.size(); i++) {
+		point validMove = validMoves[i];
+		int newValue = waitingJobs[i].moveValue;
+
+		if (player == BLACK && newValue > bestValue) {
+			// Clear previous moves
+			bestValue = newValue;
+			minimaxMoves.clear();
+			minimaxMoves.push_back(validMove);
+
+		} else if (player == WHITE && newValue < bestValue) { 
+			// Clear previous moves
+			bestValue = newValue;
+			minimaxMoves.clear();
+			minimaxMoves.push_back(validMove);
+
+		} else if (newValue == bestValue) {
+			// Add on to a previous move with same value
+			minimaxMoves.push_back(validMove);
+		}
+	}
+	printf("Best moves: { ");
+	for (int i = 0; i < minimaxMoves.size(); i++) {
+		cout << minimaxMoves[i].toString() << " ";
+	}
+	printf("}\n");
 
 	printf("======== PARALLEL MINIMAX MOVES END ========\n");
 

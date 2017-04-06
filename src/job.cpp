@@ -32,7 +32,7 @@ void splitJobs(deque<Job>* jobs, deque<Board>* boards, deque<CompletedJob>* wait
 
 			// Update waiting Jobs
 			CompletedJob waitingJob = { 
-				jobId, currentJob.id, 
+				jobId, currentJob.id, OPP(currentJob.player),
 				((OPP(currentJob.player) == BLACK) ? INT_MIN : INT_MAX), 
 				currentJob.boardsAssessed + 1 
 			};
@@ -52,7 +52,7 @@ CompletedJob executeJob(Job* job) {
 	Board* currentBoard = job->board;
 	int value = (player == BLACK) ? solver.getMaxValue(*currentBoard, player, depth) :
 									solver.getMinValue(*currentBoard, player, depth);
-	CompletedJob cj = {job->id, job->parentId, value, solver.getBoardsSearched()};
+	CompletedJob cj = {job->id, job->parentId, player, value, solver.getBoardsSearched()};
 	return cj;
 }
 
@@ -151,7 +151,7 @@ void slaveReceiveJobs(vector<Job>* jobs) {
 	}
 }
 
-void waitForJob(string jobType, int id) {
+void slaveWaitForJob(string jobType, int id) {
 	if (jobType.compare("PARALLEL_MINIMAX") == 0) {
 		vector<Job> jobsToWork;
 
@@ -235,5 +235,27 @@ void masterReceiveCompletedJobs(deque<CompletedJob>* waitingJobs, int numProcs) 
 			(*waitingJobs)[id].boardsAssessed += boardsAssessed;
 		}
 		incomingCompletedJobs.clear();
+	}
+}
+
+// Combine evaluations by Slave processes to get minimax value for original moves
+void masterRewindMinimaxStack(deque<CompletedJob>* jobs) {
+	CompletedJob job = jobs->back();
+
+	// While the completed job is not one of the original moves
+	while (job.parentId != -1) {
+		int parentId = job.parentId;
+		int player = job.player;
+		int moveValue = job.moveValue;
+		int parentMoveValue = (*jobs)[parentId].moveValue;
+		printf("REWIND [PARENT ID: %d] [PLAYER: %s] [VALUE: %d][PARENT VALUE: %d]\n",
+			parentId, (player == BLACK) ? "BLACK" : "WHITE", moveValue, parentMoveValue);
+		CompletedJob* parentJob = &((*jobs)[parentId]);
+		// Parent will choose to max (if it is BLACK) and min (if it is WHITE)
+		parentJob->moveValue = (OPP(player) == BLACK) ? 
+								max(parentMoveValue, moveValue) :
+								min(parentMoveValue, moveValue);
+		jobs->pop_back();
+		job = jobs->back();
 	}
 }

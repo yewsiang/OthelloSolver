@@ -20,10 +20,7 @@ void Game::play(int numProcs) {
 	// Start timer 
 	clock_t begin = clock();
 	
-	int i = 0;
-	while (i < 3 && !board.isGameOver()) {
-
-		i++;
+	while (!board.isGameOver()) {
 
 		// Constantly execute minimax move
 		board.printBoard(currentPlayer);
@@ -38,7 +35,6 @@ void Game::play(int numProcs) {
 			board.makeMove(currentPlayer, nextMove.x, nextMove.y);
 			switchPlayer();
 		}
-
 		break;
 	}
 
