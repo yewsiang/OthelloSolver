@@ -10,7 +10,6 @@ Game::Game(Config cf) : maxDepth(cf.getMaxDepth()),
 						board(cf.getWidth(), cf.getHeight()), 
 						solver(cf), 
 						currentPlayer(BLACK) {
-    printf("HELLO WORLD\n\n");
 	board.initBoard(cf.getWhiteStartingPositions(), cf.getBlackStartingPositions());
 }
 
@@ -23,6 +22,7 @@ void Game::play(int numProcs) {
 	
 	int i = 0;
 	while (i < 3 && !board.isGameOver()) {
+		printf("HELLO WORLD\n\n");
 		i++;
 
 		// Constantly execute minimax move

@@ -37,7 +37,6 @@ typedef struct {
 } CompletedJob;
 
 // Job-specific functions
-unsigned long getSizeOfJob(int width, int height);
 vector<Job> splitJob(Job job);
 CompletedJob executeJob(Job* job);
 vector<CompletedJob> executeAllJobs(vector<Job>* job);

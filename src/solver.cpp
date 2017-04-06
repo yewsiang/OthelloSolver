@@ -53,7 +53,7 @@ vector<point> Solver::getMinimaxMoves(Board board, int player, int depth) {
 vector<point> Solver::getParallelMinimaxMoves(Board board, int player, int depth, int numProcs) {  	
 	vector<point> validMoves = board.getValidMoves(player);
 	vector<point> minimaxMoves;
-
+	
 	// Initialize jobs
 	deque<Job> jobs;
 	deque<Board> boards;
@@ -65,10 +65,12 @@ vector<point> Solver::getParallelMinimaxMoves(Board board, int player, int depth
 
 		int** nb;
 		//int** newBoard = board.copyData();
-		Job newJob = {i, 0, 4, 4, 0, 0, nb};
+		Job newJob = {i, 0, board.getWidth(), board.getHeight(), OPP(player), depth - 1, nb};
 		jobs.push_back(newJob);
 		boards.push_back(newBoard);
 	}
+
+	minimaxMoves.push_back(validMoves[0]);
 
 	// Send header information of jobs to the rest of the processors
 	masterSendJobs(&jobs, &boards, numProcs);

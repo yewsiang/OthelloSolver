@@ -1,12 +1,6 @@
 
 #include "job.h"
 
-unsigned long getSizeOfJob(int width, int height) {
-	unsigned long sizeOfParams = 6 * sizeof(int);
-	unsigned long sizeOfBoard = (width * height) * sizeof(int) + sizeof(int*);
-	return sizeOfParams + sizeOfBoard;
-}
-
 // Given a current Job, split into multiple Jobs by taking the first valid move in the board
 vector<Job> splitJob(Job job) {
 	vector<Job> jobs;
@@ -64,6 +58,10 @@ void waitForJob(string jobType, int id) {
 }
 
 void masterSendJobs(deque<Job>* jobs, deque<Board>* boards, int numProcs) {
+	printf("MASTER\n");
+	printf("Job size: %d\n", jobs->size());
+	printf("Board size: %d\n", boards->size());
+
 	int numJobs = jobs->size();
 	for (int i = 1; i < numProcs; i++) {
 		int problemSize = floor(numJobs * (i + 1) / numProcs) - floor(numJobs * i / numProcs);
@@ -83,17 +81,20 @@ void masterSendJobs(deque<Job>* jobs, deque<Board>* boards, int numProcs) {
 		// Send information
 		MPI_Send((void*)jobsToSend.data(), jobsToSend.size() * sizeof(Job), 
 			MPI_BYTE, i, 0, MPI_COMM_WORLD);
-
+		
 		// Send array data
 		int width = jobs->front().width;
 		int height = jobs->front().height;
 		for (int k = 0; k < boardsToSend.size(); k++) {
-			Board currentBoard = (*boards)[k];
+			Board currentBoard = boardsToSend[k];
 			
 			for (int w = 0; w < width; w++) {
 				for (int h = 0; h < height; h++) {
+					// (+ 1) needed at the end because 0 was used to send just now
+					int uniqueTag = (w * width + h) + (k * width * height) + 1;
 					int num = currentBoard.getDisk(w, h);
-					MPI_Send((void*)&num, 1, MPI_INT, i, w * width + h, MPI_COMM_WORLD);
+
+					MPI_Send(&num, 1, MPI_INT, i, uniqueTag, MPI_COMM_WORLD);
 				}
 			}
 		}
@@ -117,22 +118,28 @@ void slaveReceiveJobs(vector<Job>* jobs, vector<Board>* boards) {
 	// Receive array data of Jobs
 	int width = jobs->front().width;
 	int height = jobs->front().height;
-	int data[width][height];
-	
 	for (int k = 0; k < jobs->size(); k++) {
+		Board newBoard = Board(width, height);
+		int data[width][height];
+
 		for (int w = 0; w < width; w++) {
 			for (int h = 0; h < height; h++) {
-				MPI_Recv(&data[w][h], 1, MPI_INT, 0, w * width + h, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+				// (+ 1) needed at the end because 0 was used to send just now
+				int uniqueTag = (w * width + h) + (k * width * height) + 1;
+				
+				MPI_Recv(&data[w][h], 1, MPI_INT, 0, uniqueTag, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 			}
 		}
-	}
-	Board newBoard = Board(width, height);
-	for (int w = 0; w < width; w++) {
-		for (int h = 0; h < height; h++) {
-			newBoard.setDisk(data[w][h], w, h);
+
+		// Setup new board
+		for (int w = 0; w < width; w++) {
+			for (int h = 0; h < height; h++) {
+				newBoard.setDisk(data[w][h], w, h);
+			}
 		}
+		printf("Slave received board:\n");
+		newBoard.printBoard(BLACK);
 	}
-	newBoard.printBoard(BLACK);
 }
 
 void slaveSendCompletedJobs(vector<CompletedJob>* jobs) {

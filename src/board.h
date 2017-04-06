@@ -24,6 +24,8 @@ class Board {
 		void flipDisk(int x, int y);
 		void setDisk(int player, int x, int y);
 		bool inRange(int x, int y);
+		int getWidth() { return width; };
+		int getHeight() { return height; };
 
 		// Moves
 		bool isValidMove(int player, int x, int y);
