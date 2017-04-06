@@ -22,7 +22,9 @@ int main(int argc, char** argv) {
 		game.play(numProcs);
 
 	} else {
-		slaveWaitForJob("PARALLEL_MINIMAX", id);
+		while (true) {
+			slaveWaitForJob("PARALLEL_MINIMAX", id);
+		}
 	}
 
 	MPI_Finalize();

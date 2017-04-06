@@ -60,6 +60,18 @@ bool Board::inRange(int x, int y) {
 	return (x >= 0 && x < width && y >= 0 && y < height);
 }
 
+int Board::getNumEmpty() {
+	int count = 0;
+	for (int i = 0; i < height; i++) {
+		for (int j = 0; j < width; j++) {
+			if (data[i][j] == EMPTY) {
+				count++;
+			} 
+		}
+	}
+	return count;
+}
+
 // Checks if player can place disk at (x, y)
 bool Board::isValidMove(int player, int x, int y) {
 	// Not valid if there is a Disk on it already OR if it is out of board's range

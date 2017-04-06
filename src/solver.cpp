@@ -12,6 +12,8 @@ vector<point> Solver::getMinimaxMoves(Board board, int player, int depth) {
 	vector<point> validMoves = board.getValidMoves(player);
 	if (validMoves.size() == 0) {
 		return vector<point>();
+	} else if (validMoves.size() == 1) {
+		return validMoves;
 	}
 	vector<point> minimaxMoves;
 
@@ -54,7 +56,11 @@ vector<point> Solver::getParallelMinimaxMoves(Board board, int player, int depth
 	printf("======== PARALLEL MINIMAX MOVES ============\n");
 	vector<point> validMoves = board.getValidMoves(player);
 	vector<point> minimaxMoves;
-
+	if (validMoves.size() == 0) {
+		return vector<point>();
+	} else if (validMoves.size() == 1) {
+		return validMoves;
+	}
 
 	for (int i = 0; i <validMoves.size(); i++) {
 		cout << "[" << validMoves[i].toString() << "]";
