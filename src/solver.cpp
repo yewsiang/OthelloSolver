@@ -64,17 +64,28 @@ vector<point> Solver::getParallelMinimaxMoves(Board board, int player, int depth
 	// Initialize jobs
 	deque<Job> jobs;
 	deque<Board> boards;
+	deque<CompletedJob> waitingJobs;
 	int numResults = validMoves.size();
 	int results[numResults];
+
 	for (int i = 0; i < numResults; i++) {
 		results[i] = (player == BLACK) ? INT_MIN : INT_MAX;
 		Board newBoard = board;
-		newBoard.makeMove(player, validMoves[i].x, validMoves[i].y);
+		newBoard.makeMove(player, validMoves[i].x, validMoves[i].y);		
 
-		Job newJob = {i, width, height, maxBoards, cornerValue, edgeValue, 
-			OPP(player), depth - 1, &newBoard};
+		// Setup jobs. parentId = -1 since they are the original moves
+		Job newJob = {
+			i, -1, width, height, maxBoards, cornerValue, edgeValue, 
+			OPP(player), depth - 1, 0, &newBoard
+		};
 		jobs.push_back(newJob);
 		boards.push_back(newBoard);
+
+		// Setup waiting jobs to combine results when Slaves are done
+		CompletedJob waitingJob = {
+			i, -1, ((OPP(player) == BLACK) ? INT_MIN : INT_MAX), 0
+		};
+		waitingJobs.push_back(waitingJob);
 	}
 
 	// TODO: Remove
@@ -83,36 +94,33 @@ vector<point> Solver::getParallelMinimaxMoves(Board board, int player, int depth
 	printf("=== Problem Size BEFORE splitting: %d ===\n", jobs.size());
 
 	// Split original Jobs into more Jobs before sending to divide more evenly
-	splitJobs(&jobs, &boards, numProcs, 4);
+	splitJobs(&jobs, &boards, &waitingJobs, numProcs, 3);
 
 	printf("=== Problem Size AFTER splitting: %d ===\n", jobs.size());
-	/*
-	for (int i = 0; i < jobs.size(); i++) {
-		Job currentJob = jobs[i];
+	
+	for (int i = 0; i < waitingJobs.size(); i++) {
+		CompletedJob cj = waitingJobs[i];
 		Board currentBoard = boards[i];
-		printf("  [Problem %d]\n", i + 1);
-		printf("[ID: %d][PARENT: %d] [PLAYER: %d] [LEFT: %d]\n", 
-			currentJob.id, currentJob.parentId, currentJob.player, currentJob.depthLeft);
-		currentBoard.printBoard(currentJob.player);
-
-	}*/
+		printf("WAITING [ID: %d][PARENT: %d] [VALUE: %d] [BOARDS: %d]\n", 
+			cj.id, cj.parentId, cj.moveValue, cj.boardsAssessed);
+		//currentBoard.printBoard(cj.player);
+	}
 
 	// Send Jobs to Slaves
 	masterSendJobs(&jobs, &boards, numProcs);
 
+	// Master to work on remaining Jobs
+	masterWorkOnJobs(&jobs, &boards, &waitingJobs);
+
 	// Collect results from Slaves
-	vector<CompletedJob> completedJobs;
-	masterReceiveCompletedJobs(&completedJobs, numProcs);
+	masterReceiveCompletedJobs(&waitingJobs, numProcs);
 
-	printf("Completed Jobs Size: %d\n", completedJobs.size());
-	for (int i = 0; i < completedJobs.size(); i++) {
-		int moveId = completedJobs[i].moveId;
-		int value = completedJobs[i].moveValue;
-		results[moveId] = (player == BLACK) ? max(results[moveId], value) :
-											  min(results[moveId], value);
-
-		printf("Master received Job with Parent %d [Value: %d]\n", 
-			completedJobs[i].moveId, completedJobs[i].moveValue);
+	for (int i = 0; i < waitingJobs.size(); i++) {
+		CompletedJob cj = waitingJobs[i];
+		Board currentBoard = boards[i];
+		printf("FINISHED [ID: %d][PARENT: %d] [VALUE: %d] [BOARDS: %d]\n", 
+			cj.id, cj.parentId, cj.moveValue, cj.boardsAssessed);
+		//currentBoard.printBoard(cj.player);
 	}
 
 	printf("Valid moves: ");

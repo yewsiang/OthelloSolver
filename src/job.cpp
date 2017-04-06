@@ -1,8 +1,11 @@
 
 #include "job.h"
 
-// Given a current Job, split into multiple Jobs by taking the first valid move in the board
-void splitJobs(deque<Job>* jobs, deque<Board>* boards, int numProcs, int jobsPerProc) {
+// Given a current Job, split into multiple Jobs by taking the first valid move in the board.
+// Parent jobs are stored in waitingJobs so that they can be recombined when Slaves are done.
+void splitJobs(deque<Job>* jobs, deque<Board>* boards, deque<CompletedJob>* waitingJobs, 
+	int numProcs, int jobsPerProc) {
+	int jobId = jobs->size();
 	// Split current Jobs into more Jobs until we reach desired Jobs per processor
 	while (jobs->size() < numProcs * jobsPerProc) {
 		// Get next Job
@@ -19,12 +22,23 @@ void splitJobs(deque<Job>* jobs, deque<Board>* boards, int numProcs, int jobsPer
 
 			// Package into Job and send it back into Job queue
 			Job newJob = {
-				currentJob.moveId, currentJob.width, currentJob.height, 
+				jobId, currentJob.id, currentJob.width, currentJob.height, 
 				currentJob.maxBoards, currentJob.cornerValue, currentJob.edgeValue,
-				OPP(currentJob.player), currentJob.depthLeft - 1, &newBoard
+				OPP(currentJob.player), currentJob.depthLeft - 1, 
+				currentJob.boardsAssessed + 1, &newBoard
 			};
 			jobs->push_back(newJob);
 			boards->push_back(newBoard);
+
+			// Update waiting Jobs
+			CompletedJob waitingJob = { 
+				jobId, currentJob.id, 
+				((OPP(currentJob.player) == BLACK) ? INT_MIN : INT_MAX), 
+				currentJob.boardsAssessed + 1 
+			};
+			waitingJobs->push_back(waitingJob);
+
+			jobId++;
 		}
 	}
 }
@@ -38,7 +52,7 @@ CompletedJob executeJob(Job* job) {
 	Board* currentBoard = job->board;
 	int value = (player == BLACK) ? solver.getMaxValue(*currentBoard, player, depth) :
 									solver.getMinValue(*currentBoard, player, depth);
-	CompletedJob cj = {job->moveId, value, solver.getBoardsSearched()};
+	CompletedJob cj = {job->id, job->parentId, value, solver.getBoardsSearched()};
 	return cj;
 }
 
@@ -149,18 +163,41 @@ void waitForJob(string jobType, int id) {
 	    	Board currentBoard = *(currentJob.board);
 
 	    	printf("ID: %d [PLAYER: %d][LEFT: %d] \n", 
-				currentJob.moveId, currentJob.player, currentJob.depthLeft);
-	    	currentBoard.printBoard(currentJob.player);
+				currentJob.id, currentJob.player, currentJob.depthLeft);
+	    	//currentBoard.printBoard(currentJob.player);
 	    }
 	
 	    // Work on problems
 	    vector<CompletedJob> completedJobs = executeAllJobs(jobsToWork);
 	    for (int i = 0; i < completedJobs.size(); i++) {
-  			printf("Process %d finished Job with Parent %d [Value: %d]\n", 
-  				id, completedJobs[i].moveId, completedJobs[i].moveValue);
+  			printf("Process %d finished Job %d with Parent %d [Value: %d]\n", 
+  				id, completedJobs[i].id, completedJobs[i].parentId, completedJobs[i].moveValue);
   		}
 		
 	    slaveSendCompletedJobs(&completedJobs);
+	}
+}
+
+void masterWorkOnJobs(deque<Job>* jobs, deque<Board>* boards, deque<CompletedJob>* waitingJobs) {
+	vector<Job> jobsToWork;
+	for (int i = 0; i < jobs->size(); i++) {
+		Job job = (*jobs)[i];
+		job.board = &(*boards)[i];
+		jobsToWork.push_back(job);
+	}
+	
+    vector<CompletedJob> completedJobs = executeAllJobs(jobsToWork);
+    for (int i = 0; i < completedJobs.size(); i++) {
+    	CompletedJob completedJob = completedJobs[i];
+		int id = completedJob.id;
+		int moveValue = completedJob.moveValue;
+		int boardsAssessed = completedJob.boardsAssessed;
+
+		(*waitingJobs)[id].moveValue = moveValue;
+		(*waitingJobs)[id].boardsAssessed += boardsAssessed;
+
+		printf("Process 0 finished Job %d with Parent %d [Value: %d]\n", 
+			completedJobs[i].id, completedJobs[i].parentId, completedJobs[i].moveValue);
 	}
 }
 
@@ -171,7 +208,7 @@ void slaveSendCompletedJobs(vector<CompletedJob>* jobs) {
 	jobs->clear();
 }
 
-void masterReceiveCompletedJobs(vector<CompletedJob>* jobs, int numProcs) {
+void masterReceiveCompletedJobs(deque<CompletedJob>* waitingJobs, int numProcs) {
 	for (int i = 1; i < numProcs; i++) {
 		vector<CompletedJob> incomingCompletedJobs;
 
@@ -188,11 +225,14 @@ void masterReceiveCompletedJobs(vector<CompletedJob>* jobs, int numProcs) {
 			MPI_STATUS_IGNORE);
 		// Add to completed jobs
 		for (int j = 0; j < incomingCompletedJobs.size(); j++) {
-			CompletedJob currentJob = incomingCompletedJobs[j];
-			jobs->push_back(currentJob);
-			//printf("TESTING:\n");
-			//printJob(currentJob, world_rank);
-			//currentJob.test.execute();
+			CompletedJob completedJob = incomingCompletedJobs[j];
+			int id = completedJob.id;
+			int moveValue = completedJob.moveValue;
+			int boardsAssessed = completedJob.boardsAssessed;
+
+			//waitingJobs->push_back(currentJob);
+			(*waitingJobs)[id].moveValue = moveValue;
+			(*waitingJobs)[id].boardsAssessed += boardsAssessed;
 		}
 		incomingCompletedJobs.clear();
 	}

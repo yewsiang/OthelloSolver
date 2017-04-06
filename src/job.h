@@ -14,8 +14,9 @@
 using namespace std;
 
 typedef struct {
-	// To identify the original move ID
-	int moveId;
+	// For combination of results
+	int id;
+	int parentId;
 
 	// Configurations
 	int width;
@@ -27,12 +28,14 @@ typedef struct {
 	// State of Job
 	int player;
 	int depthLeft;
+	int boardsAssessed;
 	Board* board;
 } Job;
 
 typedef struct {
-	// To identify the original move ID
-	int moveId;
+	// For combination of results
+	int id;
+	int parentId;
 
 	// Computed values
 	int moveValue;
@@ -41,7 +44,8 @@ typedef struct {
 } CompletedJob;
 
 // Job-specific functions
-void splitJobs(deque<Job>* jobs, deque<Board>* boards, int numProcs, int jobsPerProc);
+void splitJobs(deque<Job>* jobs, deque<Board>* boards, deque<CompletedJob>* waitingJobs,
+	int numProcs, int jobsPerProc);
 CompletedJob executeJob(Job* job);
 vector<CompletedJob> executeAllJobs(vector<Job>* job);
 
@@ -49,7 +53,8 @@ vector<CompletedJob> executeAllJobs(vector<Job>* job);
 void waitForJob(string jobType, int id);
 void masterSendJobs(deque<Job>* jobs, deque<Board>* boards, int numProcs);
 void slaveReceiveJobs(vector<Job>* jobs);
+void masterWorkOnJobs(deque<Job>* jobs, deque<Board>* boards, deque<CompletedJob>* waitingJobs);
 void slaveSendCompletedJobs(vector<CompletedJob>* jobs);
-void masterReceiveCompletedJobs(vector<CompletedJob>* jobs, int numProcs);
+void masterReceiveCompletedJobs(deque<CompletedJob>* jobs, int numProcs);
 
 #endif
