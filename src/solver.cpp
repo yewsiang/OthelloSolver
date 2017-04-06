@@ -51,8 +51,15 @@ vector<point> Solver::getMinimaxMoves(Board board, int player, int depth) {
  * After which, Master will wait for CompletedJobs to return from Slaves.
  */
 vector<point> Solver::getParallelMinimaxMoves(Board board, int player, int depth, int numProcs) {  	
+	printf("======== PARALLEL MINIMAX MOVES ============\n");
 	vector<point> validMoves = board.getValidMoves(player);
 	vector<point> minimaxMoves;
+
+
+	for (int i = 0; i <validMoves.size(); i++) {
+		cout << "[" << validMoves[i].toString() << "]";
+	} cout << endl;
+
 	
 	// Initialize jobs
 	deque<Job> jobs;
@@ -63,17 +70,38 @@ vector<point> Solver::getParallelMinimaxMoves(Board board, int player, int depth
 		Board newBoard = board;
 		newBoard.makeMove(player, validMoves[i].x, validMoves[i].y);
 
-		int** nb;
-		//int** newBoard = board.copyData();
-		Job newJob = {i, 0, board.getWidth(), board.getHeight(), OPP(player), depth - 1, nb};
+		Job newJob = {i, i, board.getWidth(), board.getHeight(), OPP(player), depth - 1, &newBoard};
 		jobs.push_back(newJob);
 		boards.push_back(newBoard);
 	}
 
+	// TODO: Remove
 	minimaxMoves.push_back(validMoves[0]);
 
-	// Send header information of jobs to the rest of the processors
+	printf("=== Problem Size BEFORE splitting: %d ===\n", jobs.size());
+
+	// Split original Jobs into more Jobs before sending to divide more evenly
+	splitJobs(&jobs, &boards, numProcs, 3);
+
+	printf("=== Problem Size AFTER splitting: %d ===\n", jobs.size());
+	/*
+	for (int i = 0; i < jobs.size(); i++) {
+		Job currentJob = jobs[i];
+		Board currentBoard = boards[i];
+		printf("  [Problem %d]\n", i + 1);
+		printf("[ID: %d][PARENT: %d] [PLAYER: %d] [LEFT: %d]\n", 
+			currentJob.id, currentJob.parentId, currentJob.player, currentJob.depthLeft);
+		currentBoard.printBoard(currentJob.player);
+
+	}*/
+
+	// Send Jobs to Slaves
 	masterSendJobs(&jobs, &boards, numProcs);
+
+	// Collect results from Slaves
+	//masterReceiveJobs();
+
+	printf("======== PARALLEL MINIMAX MOVES END ========\n");
 
 	return minimaxMoves;
 }

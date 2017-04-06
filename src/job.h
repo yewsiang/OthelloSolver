@@ -23,8 +23,7 @@ typedef struct {
 	// State of Job
 	int player;
 	int depthLeft;
-	//Board board;
-	int** data;
+	Board* board;
 } Job;
 
 typedef struct {
@@ -37,7 +36,7 @@ typedef struct {
 } CompletedJob;
 
 // Job-specific functions
-vector<Job> splitJob(Job job);
+void splitJobs(deque<Job>* jobs, deque<Board>* boards, int numProcs, int jobsPerProc);
 CompletedJob executeJob(Job* job);
 vector<CompletedJob> executeAllJobs(vector<Job>* job);
 

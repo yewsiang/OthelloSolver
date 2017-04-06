@@ -2,9 +2,31 @@
 #include "job.h"
 
 // Given a current Job, split into multiple Jobs by taking the first valid move in the board
-vector<Job> splitJob(Job job) {
-	vector<Job> jobs;
-	return jobs;
+void splitJobs(deque<Job>* jobs, deque<Board>* boards, int numProcs, int jobsPerProc) {
+	// Split current Jobs into more Jobs until we reach desired Jobs per processor
+	while (jobs->size() < numProcs * jobsPerProc) {
+		// Get next Job
+		Job currentJob = jobs->front();
+		Board currentBoard = boards->front();
+		jobs->pop_front();
+		boards->pop_front();
+
+		vector<point> validMoves = currentBoard.getValidMoves(currentJob.player);
+		for (int i = 0; i < validMoves.size(); i++) {
+			Board newBoard = currentBoard;
+			point move = validMoves[i];
+			newBoard.makeMove(currentJob.player, move.x, move.y);
+
+			// Package into Job and send it back into Job queue
+			Job newJob = {
+				currentJob.id, currentJob.parentId, 
+				currentJob.width, currentJob.height, 
+				OPP(currentJob.player), currentJob.depthLeft - 1, &newBoard
+			};
+			jobs->push_back(newJob);
+			boards->push_back(newBoard);
+		}
+	}
 }
 
 // Compute the minimaxScores of each move of the board in a Job
@@ -27,40 +49,37 @@ void waitForJob(string jobType, int id) {
 	if (jobType.compare("PARALLEL_MINIMAX") == 0) {
 		vector<Job> jobsToWork;
 		vector<Board> boards;
-		vector<CompletedJob> completedJobs;
 
-		slaveReceiveJobs(&jobsToWork, &boards);
+		slaveReceiveJobs(&jobsToWork);
 		
 	    printf("Process %d received jobs from process 0:\n", id);
 	    for (int i = 0; i < jobsToWork.size(); i++) {
-	    	//printJob(jobsToWork[i], world_rank);
 	    	Job currentJob = jobsToWork[i];
-	    	//Board currentBoard = currentJob.board;
-	    	//int* data = currentJob.data;
-	    	printf("Value extracted = %d\n", currentJob.id);//data[0]);
-	    	//currentBoard->printBoard(BLACK);
+	    	Board currentBoard = *(currentJob.board);
+	    	//Board currentBoard = boards[i];
+
+	    	printf("ID: %d [PLAYER: %d][LEFT: %d] \n", 
+				currentJob.id, currentJob.player, currentJob.depthLeft);
+	    	currentBoard.printBoard(currentJob.player);
 	    }
-	    /*
+	
 	    // Work on problems
+	    /*vector<CompletedJob> completedJobs;
 	    for (int i = 0; i < jobsToWork.size(); i++) {
   			Job currentJob = jobsToWork[i];
-  			while (!isJobFinished(currentJob)) {
-  				executeJob(&currentJob);
-  			}
-  			CompletedJob cj = {currentJob.number};
-  			completedJobs.push_back(cj);
-  			printf("Process %d finished Job with Parent %d. Result: %d\n", 
-  				world_rank, currentJob.parentNumber, currentJob.number);
-  		}
+
+  			//CompletedJob cj = {currentJob.number};
+  			//completedJobs.push_back(cj);
+  			//printf("Process %d finished Job with Parent %d. Result: %d\n", 
+  			//	world_rank, currentJob.parentNumber, currentJob.number);
+  		}*/
 		
-	    slaveSendCompletedJobs(&completedJobs);*/
+	    //slaveSendCompletedJobs(&completedJobs);
 	}
 }
 
 void masterSendJobs(deque<Job>* jobs, deque<Board>* boards, int numProcs) {
-	printf("MASTER\n");
-	printf("Job size: %d\n", jobs->size());
-	printf("Board size: %d\n", boards->size());
+	printf("==== MASTER SENDING JOBS =========\n");
 
 	int numJobs = jobs->size();
 	for (int i = 1; i < numProcs; i++) {
@@ -99,6 +118,8 @@ void masterSendJobs(deque<Job>* jobs, deque<Board>* boards, int numProcs) {
 			}
 		}
 	}
+
+	printf("==== MASTER SENDING JOBS ENDS ====\n");
 }
 
 void slaveReceiveJobs(vector<Job>* jobs, vector<Board>* boards) {
@@ -107,19 +128,20 @@ void slaveReceiveJobs(vector<Job>* jobs, vector<Board>* boards) {
 	MPI_Probe(0, 0, MPI_COMM_WORLD, &status);
 
 	// Resize your incoming walker buffer based on how much data is being received
-	int incoming_size;
-	MPI_Get_count(&status, MPI_BYTE, &incoming_size);
-	jobs->resize(incoming_size / sizeof(Job));
+	int incomingSize;
+	MPI_Get_count(&status, MPI_BYTE, &incomingSize);
+	jobs->resize(incomingSize / sizeof(Job));
 
 	// Receive configuration information of Jobs
-	MPI_Recv((void*)jobs->data(), incoming_size, MPI_BYTE, 0, 0, MPI_COMM_WORLD, 
+	MPI_Recv((void*)jobs->data(), incomingSize, MPI_BYTE, 0, 0, MPI_COMM_WORLD, 
 		MPI_STATUS_IGNORE);
 
 	// Receive array data of Jobs
 	int width = jobs->front().width;
 	int height = jobs->front().height;
 	for (int k = 0; k < jobs->size(); k++) {
-		Board newBoard = Board(width, height);
+		Job* currentJob = &((*jobs)[k]);
+		Board* newBoard = new Board(width, height);
 		int data[width][height];
 
 		for (int w = 0; w < width; w++) {
@@ -134,11 +156,11 @@ void slaveReceiveJobs(vector<Job>* jobs, vector<Board>* boards) {
 		// Setup new board
 		for (int w = 0; w < width; w++) {
 			for (int h = 0; h < height; h++) {
-				newBoard.setDisk(data[w][h], w, h);
+				newBoard->setDisk(data[w][h], w, h);
 			}
 		}
-		printf("Slave received board:\n");
-		newBoard.printBoard(BLACK);
+		currentJob->board = newBoard;
+		//boards->push_back(*newBoard);
 	}
 }
 

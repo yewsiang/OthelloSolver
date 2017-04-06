@@ -22,13 +22,14 @@ void Game::play(int numProcs) {
 	
 	int i = 0;
 	while (i < 3 && !board.isGameOver()) {
-		printf("HELLO WORLD\n\n");
+
 		i++;
 
 		// Constantly execute minimax move
 		board.printBoard(currentPlayer);
 
 		vector<point> validMoves = solver.getParallelMinimaxMoves(board, currentPlayer, maxDepth, numProcs);
+
 		//vector<point> validMoves = solver.getMinimaxMoves(board, currentPlayer, maxDepth);
 		if (validMoves.size() == 0) {
 			switchPlayer();
@@ -37,14 +38,17 @@ void Game::play(int numProcs) {
 			board.makeMove(currentPlayer, nextMove.x, nextMove.y);
 			switchPlayer();
 		}
+
+		break;
 	}
 
 	// End timer
 	clock_t end = clock();
   	double elapsed_secs = double(end - begin) / CLOCKS_PER_SEC;
-	board.printBoard(currentPlayer);
+	//board.printBoard(currentPlayer);
 
 	// Determine who won
+	/*
 	int score = solver.evaluateBoard(board);
 	if (score < 0) {
 		cout << "Result: WHITE wins. ";
@@ -58,6 +62,7 @@ void Game::play(int numProcs) {
 	cout << "Depth of boards: "  << maxDepth << endl;
 	cout << "Entire Space: " << (solver.getSearchedEntireSpace() ? "true" : "false") << endl;
 	cout << "Elapsed time in seconds: " << fixed << setprecision(1) << elapsed_secs << endl << endl;
+	*/
 }
 
 void Game::switchPlayer() {
