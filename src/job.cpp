@@ -120,20 +120,20 @@ void masterSendJobs(deque<Job>* jobs, deque<Board>* boards, int numProcs) {
 		vector<Job> jobsToSend;
 		vector<Board> boardsToSend;
 		for (int j = 0; j < problemSize; j++) {
-			Job currentJob = jobs->front();
+			/*Job currentJob = jobs->front();
 			jobs->pop_front();
 
 			boardsToSend.push_back(boards->front());
-			boards->pop_front();
+			boards->pop_front();*/
 
-			/*srand(time(NULL));
+			srand(time(NULL));
 			int randomId = rand() % (numJobs - jobsAllocated);
 			Job currentJob = (*jobs)[randomId];
 			jobs->erase(jobs->begin() + randomId);
 
 			boardsToSend.push_back(boards->at(randomId));
 			boards->erase(boards->begin() + randomId);
-			jobsAllocated++;*/
+			jobsAllocated++;
 
 			jobsToSend.push_back(currentJob);
 		}
@@ -277,30 +277,44 @@ void slaveSendCompletedJobs(vector<CompletedJob>* jobs) {
 }
 
 void masterReceiveCompletedJobs(deque<CompletedJob>* waitingJobs, int numProcs) {
+	vector<CompletedJob> incomingCompletedJobs;
 	for (int i = 1; i < numProcs; i++) {
-		vector<CompletedJob> incomingCompletedJobs;
+		printf("i: %d\n", i);
 
-		// Probe for new incoming walkers
+		// Probe for new incoming completed jobs
 		MPI_Status status;
 		MPI_Probe(MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, &status);
+		printf("Source: %d", status.MPI_SOURCE);
 
 		// Resize your incoming walker buffer based on how much data is being received
-		int incoming_size;
-		MPI_Get_count(&status, MPI_BYTE, &incoming_size);
-		incomingCompletedJobs.resize(incoming_size / sizeof(CompletedJob));
+		int incomingSize;
+		MPI_Get_count(&status, MPI_BYTE, &incomingSize);
+		printf("  -- Incoming size: %d. size / sizeOf(cj): %d\n", 
+			incomingSize, incomingSize / sizeof(CompletedJob));	
+		incomingCompletedJobs.resize(incomingSize / sizeof(CompletedJob));
 
-		MPI_Recv((void*)incomingCompletedJobs.data(), incoming_size, MPI_BYTE, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, 
-			MPI_STATUS_IGNORE);
+		printf("  --- Receiving\n");
+
+		MPI_Recv((void*)incomingCompletedJobs.data(), incomingSize, MPI_BYTE, 
+			status.MPI_SOURCE, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+		printf(" -- [A] --\n");
 		// Add to completed jobs
 		for (int j = 0; j < incomingCompletedJobs.size(); j++) {
+			printf(" -- For [B] j: %d --\n", j);
 			CompletedJob completedJob = incomingCompletedJobs[j];
+			printf(" -- [C] --");
 			int id = completedJob.id;
+			printf(" -- [D] --");
 			int moveValue = completedJob.moveValue;
+			printf(" -- [E] --");
 			int boardsAssessed = completedJob.boardsAssessed;
+			printf(" -- [F] --");
 
 			//waitingJobs->push_back(currentJob);
 			(*waitingJobs)[id].moveValue = moveValue;
+			printf(" -- [G] --");
 			(*waitingJobs)[id].boardsAssessed += boardsAssessed;
+			printf(" -- [H] --\n");
 		}
 		incomingCompletedJobs.clear();
 	}
