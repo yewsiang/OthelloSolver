@@ -23,8 +23,10 @@ CompletedJob executeJob(Job* job) {
 	int player = job->player;
 	int depth = job->depthLeft;
 	Board* currentBoard = job->board;
-	int value = (player == BLACK) ? solver.getMaxValue(*currentBoard, player, depth) :
-									solver.getMinValue(*currentBoard, player, depth);
+	//int value = (player == BLACK) ? solver.getMaxValue(*currentBoard, player, depth) :
+	//								solver.getMinValue(*currentBoard, player, depth);
+	int value = (player == BLACK) ? solver.getAlphaBetaMaxValue(INT_MIN, INT_MAX, *currentBoard, player, depth) :
+									solver.getAlphaBetaMinValue(INT_MIN, INT_MAX, *currentBoard, player, depth);
 	CompletedJob cj = {job->id, job->parentId, player, value, solver.getBoardsSearched()};
 	return cj;
 }
@@ -279,42 +281,26 @@ void slaveSendCompletedJobs(vector<CompletedJob>* jobs) {
 void masterReceiveCompletedJobs(deque<CompletedJob>* waitingJobs, int numProcs) {
 	vector<CompletedJob> incomingCompletedJobs;
 	for (int i = 1; i < numProcs; i++) {
-		printf("i: %d\n", i);
-
 		// Probe for new incoming completed jobs
 		MPI_Status status;
 		MPI_Probe(MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, &status);
-		printf("Source: %d", status.MPI_SOURCE);
 
 		// Resize your incoming walker buffer based on how much data is being received
 		int incomingSize;
-		MPI_Get_count(&status, MPI_BYTE, &incomingSize);
-		printf("  -- Incoming size: %d. size / sizeOf(cj): %d\n", 
-			incomingSize, incomingSize / sizeof(CompletedJob));	
+		MPI_Get_count(&status, MPI_BYTE, &incomingSize);	
 		incomingCompletedJobs.resize(incomingSize / sizeof(CompletedJob));
-
-		printf("  --- Receiving\n");
 
 		MPI_Recv((void*)incomingCompletedJobs.data(), incomingSize, MPI_BYTE, 
 			status.MPI_SOURCE, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-		printf(" -- [A] --\n");
 		// Add to completed jobs
 		for (int j = 0; j < incomingCompletedJobs.size(); j++) {
-			printf(" -- For [B] j: %d --\n", j);
 			CompletedJob completedJob = incomingCompletedJobs[j];
-			printf(" -- [C] --");
 			int id = completedJob.id;
-			printf(" -- [D] --");
 			int moveValue = completedJob.moveValue;
-			printf(" -- [E] --");
 			int boardsAssessed = completedJob.boardsAssessed;
-			printf(" -- [F] --");
 
-			//waitingJobs->push_back(currentJob);
 			(*waitingJobs)[id].moveValue = moveValue;
-			printf(" -- [G] --");
 			(*waitingJobs)[id].boardsAssessed += boardsAssessed;
-			printf(" -- [H] --\n");
 		}
 		incomingCompletedJobs.clear();
 	}

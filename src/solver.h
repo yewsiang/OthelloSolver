@@ -31,6 +31,11 @@ class Solver {
 		int getMinValue(Board board, int player, int depth);
 		int getMaxValue(Board board, int player, int depth);
 
+		// Minimax with alpha-beta pruning
+		vector<point> getAlphaBetaMoves(Board board, int player, int depth);
+		int getAlphaBetaMinValue(int alpha, int beta, Board board, int player, int depth);
+		int getAlphaBetaMaxValue(int alpha, int beta, Board board, int player, int depth);
+
 		// Scoring
 		int evaluateBoard(Board board);
 		int evaluateDepthLimitedBoard(Board board);

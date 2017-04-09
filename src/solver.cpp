@@ -49,11 +49,10 @@ vector<point> Solver::getMinimaxMoves(Board board, int player, int depth) {
 /*
  * Parallel version of getMinimaxMoves
  *
- * Master will distribute Jobs almost equally amongst Slaves before starting on Jobs itself.
- * After which, Master will wait for CompletedJobs to return from Slaves.
+ * Master will distribute Jobs almost equally amongst Slaves before working on Jobs itself.
+ * Slaves will execute Minimax on their Jobs.
  */
-vector<point> Solver::getParallelMinimaxMoves(Board board, int player, int depth, 
-											  int numProcs, int numJobsPerProc) {
+vector<point> Solver::getParallelMinimaxMoves(Board board, int player, int depth, int numProcs, int numJobsPerProc) {
 	printf("======== PARALLEL MINIMAX MOVES ============\n");
 	// Timing
 	long long startTime = wallClockTime();
@@ -225,6 +224,109 @@ int Solver::getMaxValue(Board board, int player, int depth) {
 
 		int newValue = getMinValue(newBoard, OPP(player), depth - 1);
 		value = max(value, newValue);
+	}
+	return value;
+}
+
+// Minimax algorithm but pruned using alpha-beta pruning
+vector<point> Solver::getAlphaBetaMoves(Board board, int player, int depth) {
+	vector<point> validMoves = board.getValidMoves(player);
+	if (validMoves.size() == 0) {
+		return vector<point>();
+	} else if (validMoves.size() == 1) {
+		return validMoves;
+	}
+	vector<point> minimaxMoves;
+
+	int value = (player == BLACK) ? INT_MIN : INT_MAX;
+	for (point validMove : validMoves) {
+		Board newBoard = board;
+		newBoard.makeMove(player, validMove.x, validMove.y);
+		int newValue = (player == BLACK) ? getAlphaBetaMinValue(INT_MIN, INT_MAX, newBoard, OPP(player), depth - 1)
+										 : getAlphaBetaMaxValue(INT_MIN, INT_MAX, newBoard, OPP(player), depth - 1);
+
+		if (player == BLACK && newValue > value) {
+			// Clear previous moves
+			value = newValue;
+			minimaxMoves.clear();
+			minimaxMoves.push_back(validMove);
+
+		} else if (player == WHITE && newValue < value) { 
+			// Clear previous moves
+			value = newValue;
+			minimaxMoves.clear();
+			minimaxMoves.push_back(validMove);
+
+		} else if (newValue == value) {
+			// Add on to a previous move with same value
+			minimaxMoves.push_back(validMove);
+		}
+
+		cout << "Current move = " << validMove.toString() << ". Value = " << newValue << endl;
+	}
+	return minimaxMoves;
+}
+
+int Solver::getAlphaBetaMinValue(int alpha, int beta, Board board, int player, int depth) {
+	// Evaluate boards
+	if (board.isGameOver()) {
+		return evaluateBoard(board);
+	} else if (depth == 0 || boardsSearched >= maxBoards) {
+		return evaluateDepthLimitedBoard(board);
+	}
+
+	vector<point> validMoves = board.getValidMoves(player);
+	if (validMoves.size() == 0) {
+		// Skip to next player if no moves
+		return getAlphaBetaMaxValue(alpha, beta, board, OPP(player), depth);
+	}
+
+	int value = INT_MAX;
+	for (point validMove : validMoves) {
+		boardsSearched++;
+		Board newBoard = board;
+		newBoard.makeMove(player, validMove.x, validMove.y);
+
+		int newValue = getAlphaBetaMaxValue(alpha, beta, newBoard, OPP(player), depth - 1);
+		value = min(value, newValue);
+
+		// Pruning
+		if (value <= alpha) {
+			return value;
+		}
+		beta = min(beta, value);
+	}
+	return value;
+}
+
+int Solver::getAlphaBetaMaxValue(int alpha, int beta, Board board, int player, int depth) {
+	// Evaluate boards
+	if (board.isGameOver()) {
+		return evaluateBoard(board);
+	} else if (depth == 0 || boardsSearched >= maxBoards) {
+		return evaluateDepthLimitedBoard(board);
+	}
+
+	vector<point> validMoves = board.getValidMoves(player);
+	if (validMoves.size() == 0) {
+		// Skip to next player if no moves
+		return getAlphaBetaMinValue(alpha, beta, board, OPP(player), depth);
+	}
+
+	int value = INT_MIN;
+	for (point validMove : validMoves) {
+		boardsSearched++;
+		Board newBoard = board;
+		newBoard.makeMove(player, validMove.x, validMove.y);
+
+		int newValue = getAlphaBetaMinValue(alpha, beta, newBoard, OPP(player), depth - 1);
+		value = max(value, newValue);
+
+		// Pruning
+		if (value >= beta) {
+			return value;
+		}
+		alpha = max(alpha, value);
 	}
 	return value;
 }

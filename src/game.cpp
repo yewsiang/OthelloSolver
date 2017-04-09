@@ -25,16 +25,18 @@ void Game::play(int numProcs) {
 
 		vector<point> validMoves;
 		validMoves = solver.getParallelMinimaxMoves(board, currentPlayer, maxDepth, numProcs, NUM_JOBS_PER_PROC);
-		/*
-		if (board.getNumEmpty() > 8) {
+		
+		
+		/*if (board.getNumEmpty() > 8) {
 			printf("=========================== PARALLEL ========================\n");
 			validMoves = solver.getParallelMinimaxMoves(board, currentPlayer, maxDepth, numProcs);
 		} else {
 			printf("======================== SEQUENTIAL =========================\n");
 			validMoves = solver.getMinimaxMoves(board, currentPlayer, maxDepth);			
-		}
+		}*/
 
-		//vector<point> validMoves = solver.getMinimaxMoves(board, currentPlayer, maxDepth);
+		//validMoves = solver.getAlphaBetaMoves(board, currentPlayer, maxDepth);
+		/*validMoves = solver.getMinimaxMoves(board, currentPlayer, maxDepth);
 		if (validMoves.size() == 0) {
 			switchPlayer();
 		} else {
