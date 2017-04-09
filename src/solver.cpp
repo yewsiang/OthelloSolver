@@ -52,96 +52,97 @@ vector<point> Solver::getMinimaxMoves(Board board, int player, int depth) {
  * Master will distribute Jobs almost equally amongst Slaves before starting on Jobs itself.
  * After which, Master will wait for CompletedJobs to return from Slaves.
  */
-vector<point> Solver::getParallelMinimaxMoves(Board board, int player, int depth, int numProcs) {  	
+vector<point> Solver::getParallelMinimaxMoves(Board board, int player, int depth, 
+											  int numProcs, int numJobsPerProc) {
 	printf("======== PARALLEL MINIMAX MOVES ============\n");
+	// Timing
+	long long startTime = wallClockTime();
+	long long before, after;
+	long long setupTime = 0; // Time for master to setup all the jobs before sending
+	long long commTime = 0;	// Communication
+	long long compTime = 0; // Computation
+	long long collateResultsTime = 0; // Time for master to collate results of jobs after receiving
+
 	vector<point> validMoves = board.getValidMoves(player);
-	vector<point> minimaxMoves;
 	if (validMoves.size() == 0) {
 		return vector<point>();
 	} else if (validMoves.size() == 1) {
 		return validMoves;
 	}
-
 	for (int i = 0; i <validMoves.size(); i++) {
 		cout << "[" << validMoves[i].toString() << "]";
 	} cout << endl;
 
-	
 	// Initialize jobs
 	deque<Job> jobs;
 	deque<Board> boards;
 	deque<CompletedJob> waitingJobs;
-
-	for (int i = 0; i < validMoves.size(); i++) {
-		Board newBoard = board;
-		newBoard.makeMove(player, validMoves[i].x, validMoves[i].y);		
-
-		// Setup jobs. parentId = -1 since they are the original moves
-		Job newJob = {
-			i, -1, width, height, maxBoards, cornerValue, edgeValue, 
-			OPP(player), depth - 1, 0, &newBoard
-		};
-		jobs.push_back(newJob);
-		boards.push_back(newBoard);
-
-		// Setup waiting jobs to combine results when Slaves are done
-		CompletedJob waitingJob = {
-			i, -1, OPP(player), ((OPP(player) == BLACK) ? INT_MIN : INT_MAX), 0
-		};
-		waitingJobs.push_back(waitingJob);
-	}
-
-	printf("=== Problem Size BEFORE splitting: %d ===\n", jobs.size());
+	before = wallClockTime();
+	masterInitialiseJobs(&jobs, &boards, &waitingJobs, validMoves, 
+		board, player, depth, maxBoards, cornerValue, edgeValue);
 
 	// Split original Jobs into more Jobs before sending to divide more evenly
-	splitJobs(&jobs, &boards, &waitingJobs, numProcs, 5);
-
-	printf("=== Problem Size AFTER splitting: %d ===\n", jobs.size());
+	printf("=== Problem Size BEFORE splitting: %lu ===\n", jobs.size());
+	splitJobs(&jobs, &boards, &waitingJobs, numProcs, numJobsPerProc);
+	after = wallClockTime();
+	setupTime += after - before;
+	printf("=== Problem Size AFTER splitting: %lu ===\n", jobs.size());
 	
-	for (int i = 0; i < waitingJobs.size(); i++) {
+	/*for (int i = 0; i < waitingJobs.size(); i++) {
 		CompletedJob cj = waitingJobs[i];
 		Board currentBoard = boards[i];
 		printf("WAITING [ID: %d][PARENT: %d] [%s] [VALUE: %d] [BOARDS: %d]\n", 
 			cj.id, cj.parentId, (cj.player == BLACK) ? "BLACK" : "WHITE",
 			cj.moveValue, cj.boardsAssessed);
-		//currentBoard.printBoard(cj.player);
-	}
+	}*/
 
 	// Send Jobs to Slaves
+	before = wallClockTime();
 	masterSendJobs(&jobs, &boards, numProcs);
+	after = wallClockTime();
+	commTime += after - before;
 
 	// Master to work on remaining Jobs
+	before = wallClockTime();
 	masterWorkOnJobs(&jobs, &boards, &waitingJobs);
+	after = wallClockTime();
+	compTime += after - before;
+	printf(" --- MASTER FINISHED COMPUTATIONAL JOBS: Computation =%6.2f s\n", compTime / 1000000000.0);
 
 	// Collect results from Slaves
+	before = wallClockTime();
 	masterReceiveCompletedJobs(&waitingJobs, numProcs);
+	after = wallClockTime();
+	commTime += after - before;
 
-	for (int i = 0; i < waitingJobs.size(); i++) {
+	/*for (int i = 0; i < waitingJobs.size(); i++) {
 		CompletedJob cj = waitingJobs[i];
-		Board currentBoard = boards[i];
 		printf("FINISHED [ID: %d][PARENT: %d] [%s] [VALUE: %d] [BOARDS: %d]\n", 
 			cj.id, cj.parentId, (cj.player == BLACK) ? "BLACK" : "WHITE", 
 			cj.moveValue, cj.boardsAssessed);
-		//currentBoard.printBoard(cj.player);
-	}
+	}*/
 
 	// Combine results from Slave processes
+	before = wallClockTime();
 	masterRewindMinimaxStack(&waitingJobs);
+	after = wallClockTime();
+	collateResultsTime += after - before;
 
-	for (int i = 0; i < waitingJobs.size(); i++) {
+	/*for (int i = 0; i < waitingJobs.size(); i++) {
 		CompletedJob cj = waitingJobs[i];
 		Board currentBoard = boards[i];
-		printf("FINISHED [ID: %d][PARENT: %d] [%s] [VALUE: %d] [BOARDS: %d]\n", 
+		printf("FINISHED REWINDING [ID: %d][PARENT: %d] [%s] [VALUE: %d] [BOARDS: %d]\n", 
 			cj.id, cj.parentId, (cj.player == BLACK) ? "BLACK" : "WHITE", 
 			cj.moveValue, cj.boardsAssessed);
-		//currentBoard.printBoard(cj.player);
-	}
+	}*/
 
 	// Get the best moves
+	vector<point> minimaxMoves;
 	int bestValue = (player == BLACK) ? INT_MIN : INT_MAX;
 	for (int i = 0; i < waitingJobs.size(); i++) {
 		point validMove = validMoves[i];
 		int newValue = waitingJobs[i].moveValue;
+		boardsSearched += waitingJobs[i].boardsAssessed;
 
 		if (player == BLACK && newValue > bestValue) {
 			// Clear previous moves
@@ -163,8 +164,13 @@ vector<point> Solver::getParallelMinimaxMoves(Board board, int player, int depth
 	printf("Best moves: { ");
 	for (int i = 0; i < minimaxMoves.size(); i++) {
 		cout << minimaxMoves[i].toString() << " ";
-	}
-	printf("}\n");
+	} printf("}\n");
+
+	after = wallClockTime();
+	long long totalTime = after - startTime;
+	printf("\n --- MASTER: Setup = %6.2f s, Comm = %6.2f s, Computation = %6.2f s, Collate = %6.2f s\n", 
+		setupTime / 1000000000.0, commTime / 1000000000.0, compTime / 1000000000.0, collateResultsTime / 1000000000.0);
+	printf("     [TOTAL TIME TAKEN: %6.2f s]\n\n", totalTime / 1000000000.0);
 
 	printf("======== PARALLEL MINIMAX MOVES END ========\n");
 

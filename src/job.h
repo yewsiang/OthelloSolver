@@ -6,6 +6,9 @@
 #include <deque>
 #include <vector>
 #include <math.h>
+#include <time.h>
+#include <sys/time.h>
+#include <sys/types.h>
 #include "config.h"
 #include "board.h"
 #include "point.h"
@@ -44,13 +47,18 @@ typedef struct {
 
 } CompletedJob;
 
+// Timing purposes
+long long wallClockTime();
+
 // Job-specific functions
-void splitJobs(deque<Job>* jobs, deque<Board>* boards, deque<CompletedJob>* waitingJobs,
-	int numProcs, int jobsPerProc);
 CompletedJob executeJob(Job* job);
 vector<CompletedJob> executeAllJobs(vector<Job>* job);
 
 // Communications
+void masterInitialiseJobs(deque<Job>* jobs, deque<Board>* boards, deque<CompletedJob>* waitingJobs, 
+	vector<point> validMoves, Board board, int player, int depth, int maxBoards, int cornerValue, int edgeValue);
+void splitJobs(deque<Job>* jobs, deque<Board>* boards, deque<CompletedJob>* waitingJobs,
+	int numProcs, int jobsPerProc);
 void slaveWaitForJob(string jobType, int id);
 void masterSendJobs(deque<Job>* jobs, deque<Board>* boards, int numProcs);
 void slaveReceiveJobs(vector<Job>* jobs);

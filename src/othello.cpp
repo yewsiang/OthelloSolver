@@ -14,6 +14,8 @@ int main(int argc, char** argv) {
   	MPI_Comm_rank(MPI_COMM_WORLD, &id);
 
   	if (id == 0) {
+  		cout << "Number of Processors: " << numProcs << endl;
+
 		// Retrieve configurations
 		Config cf = Config(argv[1], argv[2]);
 

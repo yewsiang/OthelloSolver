@@ -1,10 +1,11 @@
 
-#include <ctime>
 #include <iomanip>
 #include "disk.h"
 #include "game.h"
 
 using namespace std;
+
+#define NUM_JOBS_PER_PROC 10
 
 Game::Game(Config cf) : maxDepth(cf.getMaxDepth()), 
 						board(cf.getWidth(), cf.getHeight()), 
@@ -16,17 +17,16 @@ Game::Game(Config cf) : maxDepth(cf.getMaxDepth()),
 void Game::play(int numProcs) {
 	// TODO: REMOVE
 	switchPlayer();
-
-	// Start timer 
-	clock_t begin = clock();
 	
-	while (!board.isGameOver()) {
+	//while (!board.isGameOver()) {
 
 		// Constantly execute minimax move
 		board.printBoard(currentPlayer);
 
 		vector<point> validMoves;
-		if (board.getNumEmpty() > 5) {
+		validMoves = solver.getParallelMinimaxMoves(board, currentPlayer, maxDepth, numProcs, NUM_JOBS_PER_PROC);
+		/*
+		if (board.getNumEmpty() > 8) {
 			printf("=========================== PARALLEL ========================\n");
 			validMoves = solver.getParallelMinimaxMoves(board, currentPlayer, maxDepth, numProcs);
 		} else {
@@ -42,15 +42,11 @@ void Game::play(int numProcs) {
 			board.makeMove(currentPlayer, nextMove.x, nextMove.y);
 			switchPlayer();
 		}
-	}
+	}*/
 
-	// End timer
-	clock_t end = clock();
-  	double elapsed_secs = double(end - begin) / CLOCKS_PER_SEC;
 	board.printBoard(currentPlayer);
 
 	// Determine who won
-	
 	int score = solver.evaluateBoard(board);
 	if (score < 0) {
 		cout << "Result: WHITE wins. ";
@@ -63,8 +59,6 @@ void Game::play(int numProcs) {
 	cout << "Number of boards assessed: " << solver.getBoardsSearched() << endl;
 	cout << "Depth of boards: "  << maxDepth << endl;
 	cout << "Entire Space: " << (solver.getSearchedEntireSpace() ? "true" : "false") << endl;
-	cout << "Elapsed time in seconds: " << fixed << setprecision(1) << elapsed_secs << endl << endl;
-	
 }
 
 void Game::switchPlayer() {
