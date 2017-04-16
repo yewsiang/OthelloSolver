@@ -154,7 +154,7 @@ void splitJobs(deque<Job>* jobs, deque<Board>* boards, deque<CompletedJob>* wait
 	}
 }
 
-void masterSendBatchJobs(deque<Job>* jobs, deque<Board>* boards, int numProcs) {
+void masterSendBatchJobs(deque<Job>* jobs, deque<Board>* boards, int numProcs, string jobDistribution) {
 	printf("==== MASTER SENDING JOBS =========\n");
 
 	int numJobs = jobs->size();
@@ -166,15 +166,30 @@ void masterSendBatchJobs(deque<Job>* jobs, deque<Board>* boards, int numProcs) {
 		int problemSize = floor(numJobs * (i + 1) / numProcs) - floor(numJobs * i / numProcs);
 		printf("For Processor %d, Problem size: %d\n", i, problemSize);
 
-		vector<Job> jobsToSend;
-		vector<Board> boardsToSend;
-		for (int j = 0; j < problemSize; j++) {
-			/*Job currentJob = jobs->front();
-			jobs->pop_front();
+		masterSendJobs(jobs, boards, i, problemSize, jobDistribution);
+	}
 
-			boardsToSend.push_back(boards->front());
-			boards->pop_front();*/
+	printf("==== MASTER SENDING JOBS ENDS ====\n");
+}
 
+void masterSendJobs(deque<Job>* jobs, deque<Board>* boards, int id, 
+	int jobSize, string jobDistribution) {
+	printf("==== MASTER SENDING JOBS =========\n");
+
+	// Determine whether jobs to be sent are chosen randomly or sequentially
+	bool randomizeJobDistribution = (jobDistribution.compare("RANDOM") == 0);
+
+	// Prevent Job size from being bigger than the number of Jobs
+	jobSize = min(jobSize, int(jobs->size()));
+	
+	int numJobs = jobs->size();
+	int jobsAllocated = 0;
+	vector<Job> jobsToSend;
+	vector<Board> boardsToSend;
+	for (int j = 0; j < jobSize; j++) {
+
+		if (randomizeJobDistribution) {
+			// Randomly choose the jobSize jobs
 			srand(time(NULL));
 			int randomId = rand() % (numJobs - jobsAllocated);
 			Job currentJob = (*jobs)[randomId];
@@ -185,59 +200,17 @@ void masterSendBatchJobs(deque<Job>* jobs, deque<Board>* boards, int numProcs) {
 			jobsAllocated++;
 
 			jobsToSend.push_back(currentJob);
+
+		} else {
+			// Choose the first Job that is available
+			Job currentJob = jobs->front();
+			jobs->erase(jobs->begin());
+
+			boardsToSend.push_back(boards->front());
+			boards->erase(boards->begin());
+
+			jobsToSend.push_back(currentJob);
 		}
-
-		// Send information
-		MPI_Send((void*)jobsToSend.data(), jobsToSend.size() * sizeof(Job), 
-			MPI_BYTE, i, 0, MPI_COMM_WORLD);
-		
-		// Send array data
-		int width = jobs->front().width;
-		int height = jobs->front().height;
-		for (int k = 0; k < boardsToSend.size(); k++) {
-			Board currentBoard = boardsToSend[k];
-			
-			for (int w = 0; w < width; w++) {
-				for (int h = 0; h < height; h++) {
-					// (+ 1) needed at the end because 0 was used to send just now
-					int uniqueTag = (w * width + h) + (k * width * height) + 1;
-					int num = currentBoard.getDisk(w, h);
-
-					MPI_Send(&num, 1, MPI_INT, i, uniqueTag, MPI_COMM_WORLD);
-				}
-			}
-		}
-	}
-
-	printf("==== MASTER SENDING JOBS ENDS ====\n");
-}
-
-void masterSendJobs(deque<Job>* jobs, deque<Board>* boards, int id, int jobSize) {
-	printf("==== MASTER SENDING JOBS =========\n");
-
-	// Prevent Job size from being bigger than the number of Jobs
-	jobSize = min(jobSize, int(jobs->size()));
-	
-	int jobsAllocated = 0;
-	vector<Job> jobsToSend;
-	vector<Board> boardsToSend;
-	for (int j = 0; j < jobSize; j++) {
-		/*Job currentJob = jobs->front();
-		jobs->pop_front();
-
-		boardsToSend.push_back(boards->front());
-		boards->pop_front();*/
-
-		srand(time(NULL));
-		int randomId = rand() % (jobSize - jobsAllocated);
-		Job currentJob = (*jobs)[randomId];
-		jobs->erase(jobs->begin() + randomId);
-
-		boardsToSend.push_back(boards->at(randomId));
-		boards->erase(boards->begin() + randomId);
-		jobsAllocated++;
-
-		jobsToSend.push_back(currentJob);
 	}
 
 	// Send information

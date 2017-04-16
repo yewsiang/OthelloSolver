@@ -36,7 +36,7 @@ using namespace std;
  *    be evaluated using the minimax alpha-beta pruning algorithm.
  *
  */
-string ALGORITHM = "JOBPOOL_MINIMAX";
+string ALGORITHM = "JOBPOOL_ALPHABETA";
 
 /*
  * This is the method that will be used to choose boards to send to the Slave processors.
@@ -100,19 +100,17 @@ int main(int argc, char** argv) {
 
 
 		/************** SENDING PROBLEMS AS A BATCH ***************/
-		} else if (ALGORITHM.compare("BATCH_MINIMAX") == 0) {
-			solver.getParallelMinimaxMoves(board, currentPlayer, maxDepth, numProcs, NUM_JOBS_PER_PROC);
-
-		} else if (ALGORITHM.compare("BATCH_ALPHABETA") == 0) {
-			solver.getParallelMinimaxMoves(board, currentPlayer, maxDepth, numProcs, NUM_JOBS_PER_PROC);			
+		} else if (ALGORITHM.compare("BATCH_MINIMAX") == 0 || 
+				   ALGORITHM.compare("BATCH_ALPHABETA") == 0) {
+			solver.getBatchMoves(board, currentPlayer, maxDepth, numProcs, 
+				ALGORITHM, JOB_DISTRIBUTION, NUM_JOBS_PER_PROC);
 
 
 		/********************** JOB POOLING ***********************/ 
-		} else if (ALGORITHM.compare("JOBPOOL_MINIMAX") == 0) {
-			solver.getJobPoolMinimaxMoves(board, currentPlayer, maxDepth, numProcs, NUM_JOBS_PER_PROC);
-
-		} else if (ALGORITHM.compare("JOBPOOL_ALPHABETA") == 0) {
-			solver.getJobPoolMinimaxMoves(board, currentPlayer, maxDepth, numProcs, NUM_JOBS_PER_PROC);			
+		} else if (ALGORITHM.compare("JOBPOOL_MINIMAX") == 0 ||
+				   ALGORITHM.compare("JOBPOOL_ALPHABETA") == 0) {
+			solver.getJobPoolMoves(board, currentPlayer, maxDepth, numProcs, 
+				JOB_DISTRIBUTION, NUM_JOBS_PER_PROC, JOBPOOL_SEND_SIZE);
 		}
 
 		cout << "Number of boards assessed: " << solver.getBoardsSearched() << endl;
@@ -130,18 +128,14 @@ int main(int argc, char** argv) {
 
 
 		/************** SENDING PROBLEMS AS A BATCH ***************/
-		} else if (ALGORITHM.compare("BATCH_MINIMAX") == 0) {
-			slaveWaitForJob(ALGORITHM, id);
-
-		} else if (ALGORITHM.compare("BATCH_ALPHABETA") == 0) {
+		} else if (ALGORITHM.compare("BATCH_MINIMAX") == 0 || 
+				   ALGORITHM.compare("BATCH_ALPHABETA") == 0) {
 			slaveWaitForJob(ALGORITHM, id);
 
 
 		/********************** JOB POOLING ***********************/
-		} else if (ALGORITHM.compare("JOBPOOL_MINIMAX") == 0) {
-			slaveRequestJob(ALGORITHM, id);
-
-		} else if (ALGORITHM.compare("JOBPOOL_ALPHABETA") == 0) {
+		} else if (ALGORITHM.compare("JOBPOOL_MINIMAX") == 0 ||
+				   ALGORITHM.compare("JOBPOOL_ALPHABETA") == 0) {
 			slaveRequestJob(ALGORITHM, id);
 		} 
 

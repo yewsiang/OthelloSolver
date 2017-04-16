@@ -67,8 +67,8 @@ void splitJobs(deque<Job>* jobs, deque<Board>* boards, deque<CompletedJob>* wait
 	int numProcs, int jobsPerProc);
 
 void slaveWaitForJob(string algorithm, int id);
-void masterSendBatchJobs(deque<Job>* jobs, deque<Board>* boards, int numProcs);
-void masterSendJobs(deque<Job>* jobs, deque<Board>* boards, int id, int numJobs);
+void masterSendBatchJobs(deque<Job>* jobs, deque<Board>* boards, int numProcs, string jobDistribution);
+void masterSendJobs(deque<Job>* jobs, deque<Board>* boards, int id, int numJobs, string jobDistribution);
 void slaveReceiveJobs(vector<Job>* jobs);
 void masterWorkOnJobs(string algorithm, deque<Job>* jobs, deque<Board>* boards, deque<CompletedJob>* waitingJobs);
 void slaveSendCompletedJobs(vector<CompletedJob>* jobs);

@@ -3,11 +3,8 @@
 
 using namespace std;
 
-vector<point> Solver::getBestMoves(Board board, int player, int depth) {
-	return getMinimaxMoves(board, player, depth);
-}
 
-/***************** PARALLEL ALGORITHMS *****************/
+/******************************* PARALLEL ALGORITHMS *******************************/
 
 /*
  * Parallel version of getMinimaxMoves
@@ -15,7 +12,9 @@ vector<point> Solver::getBestMoves(Board board, int player, int depth) {
  * Master will distribute Jobs almost equally amongst Slaves before working on Jobs itself.
  * Slaves will execute Minimax on their Jobs.
  */
-vector<point> Solver::getParallelMinimaxMoves(Board board, int player, int depth, int numProcs, int numJobsPerProc) {
+vector<point> Solver::getBatchMoves(Board board, int player, int depth, int numProcs,
+	string algorithm, string jobDistribution, int numJobsPerProc) {
+
 	printf("======== PARALLEL MINIMAX MOVES ============\n");
 	// Timing
 	long long startTime = wallClockTime();
@@ -60,13 +59,13 @@ vector<point> Solver::getParallelMinimaxMoves(Board board, int player, int depth
 
 	// Send Jobs to Slaves
 	before = wallClockTime();
-	masterSendBatchJobs(&jobs, &boards, numProcs);
+	masterSendBatchJobs(&jobs, &boards, numProcs, jobDistribution);
 	after = wallClockTime();
 	commTime += after - before;
 
 	// Master to work on remaining Jobs
 	before = wallClockTime();
-	masterWorkOnJobs("BATCH_MINIMAX", &jobs, &boards, &waitingJobs);
+	masterWorkOnJobs(algorithm, &jobs, &boards, &waitingJobs);
 	after = wallClockTime();
 	compTime += after - before;
 	printf(" --- MASTER FINISHED COMPUTATIONAL JOBS: Computation =%6.2f s\n", compTime / 1000000000.0);
@@ -139,7 +138,9 @@ vector<point> Solver::getParallelMinimaxMoves(Board board, int player, int depth
 	return minimaxMoves;
 }
 
-vector<point> Solver::getJobPoolMinimaxMoves(Board board, int player, int depth, int numProcs, int numJobsPerProc) {
+vector<point> Solver::getJobPoolMoves(Board board, int player, int depth, int numProcs, 
+	string jobDistribution, int numJobsPerProc, int jobPoolSendSize) {
+
 	printf("======== JOB POOL MINIMAX MOVES ============\n");
 	// Timing
 	long long startTime = wallClockTime();
@@ -184,7 +185,6 @@ vector<point> Solver::getJobPoolMinimaxMoves(Board board, int player, int depth,
 
 	// Handle Job requests from Slave processes
 	int ongoingSlaves = 0;
-	int jobSize = 3;
 	while(jobs.size() > 0 || ongoingSlaves > 0) {
 		//printf("   >>>> jobs.size(): %d, ongoingSlaves: %d", jobs.size(), ongoingSlaves);
 
@@ -203,7 +203,7 @@ vector<point> Solver::getJobPoolMinimaxMoves(Board board, int player, int depth,
 			before = wallClockTime();
 			int response = MASTER_SENDING_JOBS;
 			MPI_Send(&response, 1, MPI_INT, status.MPI_SOURCE, 0, MPI_COMM_WORLD);
-			masterSendJobs(&jobs, &boards, status.MPI_SOURCE, jobSize);
+			masterSendJobs(&jobs, &boards, status.MPI_SOURCE, jobPoolSendSize, jobDistribution);
 			ongoingSlaves++;
 			after = wallClockTime();
 			commTime += after - before;
@@ -292,7 +292,7 @@ vector<point> Solver::getJobPoolMinimaxMoves(Board board, int player, int depth,
 	return minimaxMoves;
 }
 
-/**************** SEQUENTIAL ALGORITHMS ****************/
+/****************************** SEQUENTIAL ALGORITHMS ******************************/
 
 // Assume game is not over, get the minimax moves
 vector<point> Solver::getMinimaxMoves(Board board, int player, int depth) {
