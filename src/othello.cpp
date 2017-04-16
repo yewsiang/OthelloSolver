@@ -26,7 +26,13 @@ int main(int argc, char** argv) {
 		game.play(ALGORITHM, numProcs);
 
 	} else {
-		slaveWaitForJob(ALGORITHM, id);
+		// Slave process acts differently depending on algorithm
+		if (ALGORITHM.compare("PARALLEL_MINIMAX") == 0) {
+			slaveWaitForJob(ALGORITHM, id);
+
+		} else if (ALGORITHM.compare("JOBPOOL_MINIMAX") == 0) {
+			slaveRequestJob(ALGORITHM, id);
+		}
 
 		printf("\nSLAVE %d FINALIZED\n", id);
 	}

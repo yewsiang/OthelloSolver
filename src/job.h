@@ -14,6 +14,11 @@
 #include "point.h"
 #include "solver.h"
 
+#define SLAVE_WANTS_JOBS 0
+#define SLAVE_SENDING_JOBS 1
+#define MASTER_SENDING_JOBS 2
+#define MASTER_NO_JOBS 3
+
 using namespace std;
 
 typedef struct {
@@ -60,13 +65,17 @@ void masterInitialiseJobs(deque<Job>* jobs, deque<Board>* boards, deque<Complete
 void splitJobs(deque<Job>* jobs, deque<Board>* boards, deque<CompletedJob>* waitingJobs,
 	int numProcs, int jobsPerProc);
 
-void slaveWaitForJob(string jobType, int id);
-void masterSendJobs(deque<Job>* jobs, deque<Board>* boards, int numProcs);
+void slaveWaitForJob(string algorithm, int id);
+void masterSendBatchJobs(deque<Job>* jobs, deque<Board>* boards, int numProcs);
+void masterSendJobs(deque<Job>* jobs, deque<Board>* boards, int id, int numJobs);
 void slaveReceiveJobs(vector<Job>* jobs);
 void masterWorkOnJobs(deque<Job>* jobs, deque<Board>* boards, deque<CompletedJob>* waitingJobs);
-
 void slaveSendCompletedJobs(vector<CompletedJob>* jobs);
 void masterReceiveCompletedJobs(deque<CompletedJob>* jobs, int numProcs);
+void masterReceiveCompletedJobsFromSlave(deque<CompletedJob>* jobs, int id);
+
+void slaveRequestJob(string algorithm, int id);
+
 void masterRewindMinimaxStack(deque<CompletedJob>* jobs);
 
 #endif

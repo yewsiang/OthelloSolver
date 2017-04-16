@@ -60,7 +60,7 @@ vector<point> Solver::getParallelMinimaxMoves(Board board, int player, int depth
 
 	// Send Jobs to Slaves
 	before = wallClockTime();
-	masterSendJobs(&jobs, &boards, numProcs);
+	masterSendBatchJobs(&jobs, &boards, numProcs);
 	after = wallClockTime();
 	commTime += after - before;
 
@@ -182,24 +182,61 @@ vector<point> Solver::getJobPoolMinimaxMoves(Board board, int player, int depth,
 			cj.moveValue, cj.boardsAssessed);
 	}*/
 
-	// Send Jobs to Slaves
-	before = wallClockTime();
-	masterSendJobs(&jobs, &boards, numProcs);
-	after = wallClockTime();
-	commTime += after - before;
+	// Handle Job requests from Slave processes
+	int ongoingSlaves = 0;
+	int jobSize = 3;
+	while(jobs.size() > 0 || ongoingSlaves > 0) {
+		printf("   >>>> jobs.size(): %d, ongoingSlaves: %d", jobs.size(), ongoingSlaves);
 
-	// Master to work on remaining Jobs
-	before = wallClockTime();
-	masterWorkOnJobs(&jobs, &boards, &waitingJobs);
-	after = wallClockTime();
-	compTime += after - before;
-	printf(" --- MASTER FINISHED COMPUTATIONAL JOBS: Computation =%6.2f s\n", compTime / 1000000000.0);
+		MPI_Status status;
+		before = wallClockTime();
+		int request;
+		MPI_Recv(&request, 1, MPI_INT, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, &status);
+		after = wallClockTime();
+		commTime += after - before;
 
-	// Collect results from Slaves
-	before = wallClockTime();
-	masterReceiveCompletedJobs(&waitingJobs, numProcs);
-	after = wallClockTime();
-	commTime += after - before;
+		if (request == SLAVE_WANTS_JOBS && jobs.size() > 0) {
+
+			printf("   >>>> MASTER RECEIVED JOB REQUEST FROM %d\n", status.MPI_SOURCE);
+
+			// If there are Jobs, send those Jobs the Slaves are requesting for them
+			before = wallClockTime();
+			int response = MASTER_SENDING_JOBS;
+			MPI_Send(&response, 1, MPI_INT, status.MPI_SOURCE, 0, MPI_COMM_WORLD);
+			masterSendJobs(&jobs, &boards, status.MPI_SOURCE, jobSize);
+			ongoingSlaves++;
+			after = wallClockTime();
+			commTime += after - before;
+
+		} else if (request == SLAVE_WANTS_JOBS && jobs.size() <= 0) {
+
+			printf("   >>>> MASTER RECEIVED JOB REQUEST FROM %d BUT NO JOBS\n", status.MPI_SOURCE);
+
+			// If there are no more Jobs, inform the Slaves so that they will terminate
+			before = wallClockTime();
+			int response = MASTER_NO_JOBS;
+			MPI_Send(&response, 1, MPI_INT, status.MPI_SOURCE, 0, MPI_COMM_WORLD);
+			after = wallClockTime();
+			commTime += after - before;
+
+		} else if (request == SLAVE_SENDING_JOBS) {
+
+			printf("   >>>> SLAVE %d SENDING COMPLETED JOBS\n", status.MPI_SOURCE);
+
+			// Collect results from Slaves
+			before = wallClockTime();
+			masterReceiveCompletedJobsFromSlave(&waitingJobs, status.MPI_SOURCE);
+			ongoingSlaves--;
+			after = wallClockTime();
+			commTime += after - before;
+		}
+	}
+	// Tell the last Slave to stop working
+	MPI_Status status;
+	int request;
+	int response = MASTER_NO_JOBS;
+	MPI_Recv(&request, 1, MPI_INT, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, &status);
+	MPI_Send(&response, 1, MPI_INT, status.MPI_SOURCE, 0, MPI_COMM_WORLD);
 
 	/*for (int i = 0; i < waitingJobs.size(); i++) {
 		CompletedJob cj = waitingJobs[i];
@@ -213,14 +250,6 @@ vector<point> Solver::getJobPoolMinimaxMoves(Board board, int player, int depth,
 	masterRewindMinimaxStack(&waitingJobs);
 	after = wallClockTime();
 	collateResultsTime += after - before;
-
-	/*for (int i = 0; i < waitingJobs.size(); i++) {
-		CompletedJob cj = waitingJobs[i];
-		Board currentBoard = boards[i];
-		printf("FINISHED REWINDING [ID: %d][PARENT: %d] [%s] [VALUE: %d] [BOARDS: %d]\n", 
-			cj.id, cj.parentId, (cj.player == BLACK) ? "BLACK" : "WHITE", 
-			cj.moveValue, cj.boardsAssessed);
-	}*/
 
 	// Get the best moves
 	vector<point> minimaxMoves;
