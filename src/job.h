@@ -59,10 +59,12 @@ void masterInitialiseJobs(deque<Job>* jobs, deque<Board>* boards, deque<Complete
 	vector<point> validMoves, Board board, int player, int depth, int maxBoards, int cornerValue, int edgeValue);
 void splitJobs(deque<Job>* jobs, deque<Board>* boards, deque<CompletedJob>* waitingJobs,
 	int numProcs, int jobsPerProc);
+
 void slaveWaitForJob(string jobType, int id);
 void masterSendJobs(deque<Job>* jobs, deque<Board>* boards, int numProcs);
 void slaveReceiveJobs(vector<Job>* jobs);
 void masterWorkOnJobs(deque<Job>* jobs, deque<Board>* boards, deque<CompletedJob>* waitingJobs);
+
 void slaveSendCompletedJobs(vector<CompletedJob>* jobs);
 void masterReceiveCompletedJobs(deque<CompletedJob>* jobs, int numProcs);
 void masterRewindMinimaxStack(deque<CompletedJob>* jobs);
