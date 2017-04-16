@@ -9,7 +9,7 @@ class Game {
 	public:
 		Game(Config cf);
 		
-		void play(int numProcs);
+		void play(string algorithm, int numProcs);
 		void switchPlayer();
 
 	protected:

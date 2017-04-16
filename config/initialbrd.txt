@@ -2,3 +2,5 @@
 Size: 6,6
 White: { b2,b6,c3,c5,d4,f2,f3,f4 }
 Black: { a4,b1,b3,b4,c1,c2,c4,d1,d2,d3,d5,d6,e2,e3,e4 }
+Color: White
+Timeout: 10

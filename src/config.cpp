@@ -27,7 +27,13 @@ Config::Config(char* initialBoardFilename, char* paramsFilename) {
         } else if (token.compare("Black") == 0) {
         	value = value.substr(value.find("{") + 2, value.find("}") - 2);
         	blackStartingPositions = extractPoints(value);
-        } 
+
+        } else if (token.compare("Color") == 0) {
+            player = (value.compare("Black") == 0) ? BLACK : WHITE;
+            
+        } else if (token.compare("Timeout") == 0) {
+            timeout = stoi(value);
+        }
     }
 
     // Read Evaluation Parameters
@@ -50,23 +56,22 @@ Config::Config(char* initialBoardFilename, char* paramsFilename) {
     cout << endl << "(Initial Configurations)" << endl;
 
     cout << "Size: " << getWidth() << "," << getHeight() << endl;
-    cout << "White: " << endl;
-    cout << "Black: " << endl;
+    cout << "White: ";
+    for (point p: getWhiteStartingPositions()) {
+        cout << "[" << p.toString() << "]";
+    }
+    cout << endl << "Black: ";
+    for (point p: getBlackStartingPositions()) {
+        cout << "[" << p.toString() << "]";
+    }
+    cout << endl;
+    cout << "Color: " << ((getPlayer() == BLACK) ? "Black" : "White") << endl;
+    cout << "Timeout: " << getTimeout() << endl;
 
     cout << "MaxDepth: " << getMaxDepth() << endl;
     cout << "MaxBoards: " << getMaxBoards() << endl;
     cout << "CornerValue: " << getCornerValue() << endl;
     cout << "EdgeValue: " << getEdgeValue() << endl;
-
-    cout << "White: ";
-    for (point p: getWhiteStartingPositions()) {
-		cout << "[" << p.toString() << "]";
-	}
-	cout << endl << "Black: ";
-	for (point p: getBlackStartingPositions()) {
-        cout << "[" << p.toString() << "]";
-    }
-    cout << endl;
 }
 
 // Extract the points which are separated by commas
@@ -85,6 +90,8 @@ vector<point> Config::extractPoints(string input) {
 // Initial Board
 int Config::getWidth() { return width; }
 int Config::getHeight() { return height; }
+int Config::getPlayer() { return player; }
+int Config::getTimeout() { return timeout; }
 vector<point> Config::getWhiteStartingPositions() { return whiteStartingPositions; }
 vector<point> Config::getBlackStartingPositions() { return blackStartingPositions; }
 

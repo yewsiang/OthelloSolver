@@ -6,6 +6,7 @@
 #include <fstream>
 #include <sstream>
 #include <iostream>
+#include "disk.h"
 #include "point.h"
 
 using namespace std;
@@ -20,6 +21,8 @@ class Config {
 		// Initial Board
 		int getWidth();
 		int getHeight();
+		int getPlayer();
+		int getTimeout();
 		vector<point> getWhiteStartingPositions();
 		vector<point> getBlackStartingPositions();
 
@@ -33,6 +36,8 @@ class Config {
 		// Initial Board
 		int width;
 		int height;
+		int player;
+		int timeout;
 		vector<point> whiteStartingPositions;
 		vector<point> blackStartingPositions;
 

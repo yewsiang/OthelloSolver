@@ -69,7 +69,11 @@ void masterInitialiseJobs(deque<Job>* jobs, deque<Board>* boards, deque<Complete
 // Parent jobs are stored in waitingJobs so that they can be recombined when Slaves are done.
 void splitJobs(deque<Job>* jobs, deque<Board>* boards, deque<CompletedJob>* waitingJobs, 
 	int numProcs, int jobsPerProc) {
+
+	// To prevent too many jobs from being created
+	jobsPerProc = min(100, jobsPerProc);
 	int jobId = jobs->size();
+
 	// Split current Jobs into more Jobs until we reach desired Jobs per processor
 	while (jobs->size() < numProcs * jobsPerProc) {
 		// Get next Job
@@ -78,10 +82,23 @@ void splitJobs(deque<Job>* jobs, deque<Board>* boards, deque<CompletedJob>* wait
 		jobs->pop_front();
 		boards->pop_front();
 
-		vector<point> validMoves = currentBoard.getValidMoves(currentJob.player);
-		//if (validMoves.size() == 0) {
+		Solver solver = Solver(currentJob.width, currentJob.height, currentJob.depthLeft, 
+			currentJob.maxBoards, currentJob.cornerValue, currentJob.edgeValue);
 
-			//}
+		// Do not send if the current board is over
+		if (currentBoard.isGameOver()) {
+			CompletedJob waitingJob = { 
+				currentJob.id, currentJob.parentId, currentJob.player,
+				solver.evaluateBoard(currentBoard), 
+				currentJob.boardsAssessed + 1 
+			};
+			waitingJobs->push_back(waitingJob);
+
+			jobId++;
+			continue;
+		}
+		vector<point> validMoves = currentBoard.getValidMoves(currentJob.player);
+		
 		for (int i = 0; i < validMoves.size(); i++) {
 			Board newBoard = currentBoard;
 			point move = validMoves[i];
@@ -114,6 +131,9 @@ void masterSendJobs(deque<Job>* jobs, deque<Board>* boards, int numProcs) {
 	printf("==== MASTER SENDING JOBS =========\n");
 
 	int numJobs = jobs->size();
+
+	//printf("NUMJOBS: %d\n", numJobs);
+
 	int jobsAllocated = 0;
 	for (int i = 1; i < numProcs; i++) {
 		int problemSize = floor(numJobs * (i + 1) / numProcs) - floor(numJobs * i / numProcs);
@@ -175,14 +195,27 @@ void slaveReceiveJobs(vector<Job>* jobs) {
 	MPI_Get_count(&status, MPI_BYTE, &incomingSize);
 	jobs->resize(incomingSize / sizeof(Job));
 
+	//printf("[A]\n");
+
 	// Receive configuration information of Jobs
 	MPI_Recv((void*)jobs->data(), incomingSize, MPI_BYTE, 0, 0, MPI_COMM_WORLD, 
 		MPI_STATUS_IGNORE);
+
+	//printf("[B]\n");
+	//printf("incomingSize: %d\n", incomingSize);
+
+	// If no incoming Jobs, simply return
+	if (incomingSize == 0) {
+		return;
+	}
 
 	// Receive array data of Jobs
 	int width = jobs->front().width;
 	int height = jobs->front().height;
 	for (int k = 0; k < jobs->size(); k++) {
+
+		//printf("[C] K: %d\n", k);
+
 		Job* currentJob = &((*jobs)[k]);
 		Board* newBoard = new Board(width, height);
 		int data[width][height];
@@ -226,7 +259,7 @@ void slaveWaitForJob(string jobType, int id) {
 	    	printf("ID: %d [PLAYER: %d][LEFT: %d] \n", 
 				currentJob.id, currentJob.player, currentJob.depthLeft);
 	    }*/
-	
+
 		// Work on problems
 		before = wallClockTime();
 	    vector<CompletedJob> completedJobs = executeAllJobs(jobsToWork);
@@ -245,16 +278,70 @@ void slaveWaitForJob(string jobType, int id) {
 
 		printf(" --- SLAVE %2d FINISHED: Communication =%6.2f s; Computation =%6.2f s\n", 
 			id, commTime / 1000000000.0, compTime / 1000000000.0);
+
+	} else if (jobType.compare("JOBPOOL_MINIMAX") == 0) {
+		vector<Job> jobsToWork;
+
+		while (true) {
+			// Receive Jobs from master
+			before = wallClockTime();
+			slaveReceiveJobs(&jobsToWork);
+			after = wallClockTime();
+			commTime += after - before;
+		    /*printf("Process %d received jobs from process 0:\n", id);
+		    for (int i = 0; i < jobsToWork.size(); i++) {
+		    	Job currentJob = jobsToWork[i];
+		    	Board currentBoard = *(currentJob.board);
+
+		    	printf("ID: %d [PLAYER: %d][LEFT: %d] \n", 
+					currentJob.id, currentJob.player, currentJob.depthLeft);
+		    }*/
+
+		    // End if no more Jobs
+		    if (jobsToWork.size() < 1) break;
+
+			// Work on problems
+			before = wallClockTime();
+		    vector<CompletedJob> completedJobs = executeAllJobs(jobsToWork);
+		    after = wallClockTime();
+			compTime += after - before;
+		    /*for (int i = 0; i < completedJobs.size(); i++) {
+	  			printf("Process %d finished Job %d with Parent %d [Value: %d]\n", 
+	  				id, completedJobs[i].id, completedJobs[i].parentId, completedJobs[i].moveValue);
+	  		}*/
+			
+			// Return results to master
+			before = wallClockTime();
+		    slaveSendCompletedJobs(&completedJobs);
+		    after = wallClockTime();
+			commTime += after - before;
+
+			break;
+		}
+
+		printf(" --- SLAVE %2d FINISHED: Communication =%6.2f s; Computation =%6.2f s\n", 
+			id, commTime / 1000000000.0, compTime / 1000000000.0);
 	}
 }
 
 void masterWorkOnJobs(deque<Job>* jobs, deque<Board>* boards, deque<CompletedJob>* waitingJobs) {
+	//printf("TEST A\n");
+
+	// If no jobs, return
+	if (int(jobs->size()) < 1) {
+		return;
+	}
+
+	//printf("TEST B, jobs->size(): %d\n", jobs->size());
+
 	vector<Job> jobsToWork;
 	for (int i = 0; i < jobs->size(); i++) {
 		Job job = (*jobs)[i];
 		job.board = &(*boards)[i];
 		jobsToWork.push_back(job);
 	}
+
+	//printf("TEST C, jobs->size(): %d\n", jobs->size());
 	
     vector<CompletedJob> completedJobs = executeAllJobs(jobsToWork);
     for (int i = 0; i < completedJobs.size(); i++) {
@@ -319,10 +406,13 @@ void masterRewindMinimaxStack(deque<CompletedJob>* jobs) {
 		//printf("REWIND [PARENT ID: %d] [PLAYER: %s] [VALUE: %d][PARENT VALUE: %d]\n",
 		//	parentId, (player == BLACK) ? "BLACK" : "WHITE", moveValue, parentMoveValue);
 		CompletedJob* parentJob = &((*jobs)[parentId]);
+		parentJob->boardsAssessed += job.boardsAssessed;
+
 		// Parent will choose to max (if it is BLACK) and min (if it is WHITE)
 		parentJob->moveValue = (OPP(player) == BLACK) ? 
 								max(parentMoveValue, moveValue) :
 								min(parentMoveValue, moveValue);
+
 		jobs->pop_back();
 		job = jobs->back();
 	}

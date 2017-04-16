@@ -24,10 +24,14 @@ class Solver {
 			cornerValue(cornerV), edgeValue(edgeV), 
 			searchedEntireSpace(true), boardsSearched(0) {}
 		
+		/**** PARALLEL ALGORITHMS ****/		
+		vector<point> getParallelMinimaxMoves(Board board, int player, int depth, int numProcs, int numJobsPerProc);
+		vector<point> getJobPoolMinimaxMoves(Board board, int player, int depth, int numProcs, int numJobsPerProc);
+
+		/**** SEQUENTIAL ALGORITHMS ****/
 		// Minimax
 		vector<point> getBestMoves(Board board, int player, int depth);
 		vector<point> getMinimaxMoves(Board board, int player, int depth);
-		vector<point> getParallelMinimaxMoves(Board board, int player, int depth, int numProcs, int numJobsPerProc);
 		int getMinValue(Board board, int player, int depth);
 		int getMaxValue(Board board, int player, int depth);
 

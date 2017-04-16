@@ -7,44 +7,7 @@ vector<point> Solver::getBestMoves(Board board, int player, int depth) {
 	return getMinimaxMoves(board, player, depth);
 }
 
-// Assume game is not over, get the minimax moves
-vector<point> Solver::getMinimaxMoves(Board board, int player, int depth) {
-	vector<point> validMoves = board.getValidMoves(player);
-	if (validMoves.size() == 0) {
-		return vector<point>();
-	} else if (validMoves.size() == 1) {
-		return validMoves;
-	}
-	vector<point> minimaxMoves;
-
-	int value = (player == BLACK) ? INT_MIN : INT_MAX;
-	for (point validMove : validMoves) {
-		Board newBoard = board;
-		newBoard.makeMove(player, validMove.x, validMove.y);
-		int newValue = (player == BLACK) ? getMinValue(newBoard, OPP(player), depth - 1) :
-										   getMaxValue(newBoard, OPP(player), depth - 1);
-
-		if (player == BLACK && newValue > value) {
-			// Clear previous moves
-			value = newValue;
-			minimaxMoves.clear();
-			minimaxMoves.push_back(validMove);
-
-		} else if (player == WHITE && newValue < value) { 
-			// Clear previous moves
-			value = newValue;
-			minimaxMoves.clear();
-			minimaxMoves.push_back(validMove);
-
-		} else if (newValue == value) {
-			// Add on to a previous move with same value
-			minimaxMoves.push_back(validMove);
-		}
-
-		cout << "Current move = " << validMove.toString() << ". Value = " << newValue << endl;
-	}
-	return minimaxMoves;
-}
+/***************** PARALLEL ALGORITHMS *****************/
 
 /*
  * Parallel version of getMinimaxMoves
@@ -173,6 +136,171 @@ vector<point> Solver::getParallelMinimaxMoves(Board board, int player, int depth
 
 	printf("======== PARALLEL MINIMAX MOVES END ========\n");
 
+	return minimaxMoves;
+}
+
+vector<point> Solver::getJobPoolMinimaxMoves(Board board, int player, int depth, int numProcs, int numJobsPerProc) {
+	printf("======== JOB POOL MINIMAX MOVES ============\n");
+	// Timing
+	long long startTime = wallClockTime();
+	long long before, after;
+	long long setupTime = 0; // Time for master to setup all the jobs before sending
+	long long commTime = 0;	// Communication
+	long long compTime = 0; // Computation
+	long long collateResultsTime = 0; // Time for master to collate results of jobs after receiving
+
+	vector<point> validMoves = board.getValidMoves(player);
+	if (validMoves.size() == 0) {
+		return vector<point>();
+	} else if (validMoves.size() == 1) {
+		return validMoves;
+	}
+	for (int i = 0; i <validMoves.size(); i++) {
+		cout << "[" << validMoves[i].toString() << "]";
+	} cout << endl;
+
+	// Initialize jobs
+	deque<Job> jobs;
+	deque<Board> boards;
+	deque<CompletedJob> waitingJobs;
+	before = wallClockTime();
+	masterInitialiseJobs(&jobs, &boards, &waitingJobs, validMoves, 
+		board, player, depth, maxBoards, cornerValue, edgeValue);
+
+	// Split original Jobs into more Jobs before sending to divide more evenly
+	printf("=== Problem Size BEFORE splitting: %lu ===\n", jobs.size());
+	splitJobs(&jobs, &boards, &waitingJobs, numProcs, numJobsPerProc);
+	after = wallClockTime();
+	setupTime += after - before;
+	printf("=== Problem Size AFTER splitting: %lu ===\n", jobs.size());
+	
+	/*for (int i = 0; i < waitingJobs.size(); i++) {
+		CompletedJob cj = waitingJobs[i];
+		Board currentBoard = boards[i];
+		printf("WAITING [ID: %d][PARENT: %d] [%s] [VALUE: %d] [BOARDS: %d]\n", 
+			cj.id, cj.parentId, (cj.player == BLACK) ? "BLACK" : "WHITE",
+			cj.moveValue, cj.boardsAssessed);
+	}*/
+
+	// Send Jobs to Slaves
+	before = wallClockTime();
+	masterSendJobs(&jobs, &boards, numProcs);
+	after = wallClockTime();
+	commTime += after - before;
+
+	// Master to work on remaining Jobs
+	before = wallClockTime();
+	masterWorkOnJobs(&jobs, &boards, &waitingJobs);
+	after = wallClockTime();
+	compTime += after - before;
+	printf(" --- MASTER FINISHED COMPUTATIONAL JOBS: Computation =%6.2f s\n", compTime / 1000000000.0);
+
+	// Collect results from Slaves
+	before = wallClockTime();
+	masterReceiveCompletedJobs(&waitingJobs, numProcs);
+	after = wallClockTime();
+	commTime += after - before;
+
+	/*for (int i = 0; i < waitingJobs.size(); i++) {
+		CompletedJob cj = waitingJobs[i];
+		printf("FINISHED [ID: %d][PARENT: %d] [%s] [VALUE: %d] [BOARDS: %d]\n", 
+			cj.id, cj.parentId, (cj.player == BLACK) ? "BLACK" : "WHITE", 
+			cj.moveValue, cj.boardsAssessed);
+	}*/
+
+	// Combine results from Slave processes
+	before = wallClockTime();
+	masterRewindMinimaxStack(&waitingJobs);
+	after = wallClockTime();
+	collateResultsTime += after - before;
+
+	/*for (int i = 0; i < waitingJobs.size(); i++) {
+		CompletedJob cj = waitingJobs[i];
+		Board currentBoard = boards[i];
+		printf("FINISHED REWINDING [ID: %d][PARENT: %d] [%s] [VALUE: %d] [BOARDS: %d]\n", 
+			cj.id, cj.parentId, (cj.player == BLACK) ? "BLACK" : "WHITE", 
+			cj.moveValue, cj.boardsAssessed);
+	}*/
+
+	// Get the best moves
+	vector<point> minimaxMoves;
+	int bestValue = (player == BLACK) ? INT_MIN : INT_MAX;
+	for (int i = 0; i < waitingJobs.size(); i++) {
+		point validMove = validMoves[i];
+		int newValue = waitingJobs[i].moveValue;
+		boardsSearched += waitingJobs[i].boardsAssessed;
+
+		if (player == BLACK && newValue > bestValue) {
+			// Clear previous moves
+			bestValue = newValue;
+			minimaxMoves.clear();
+			minimaxMoves.push_back(validMove);
+
+		} else if (player == WHITE && newValue < bestValue) { 
+			// Clear previous moves
+			bestValue = newValue;
+			minimaxMoves.clear();
+			minimaxMoves.push_back(validMove);
+
+		} else if (newValue == bestValue) {
+			// Add on to a previous move with same value
+			minimaxMoves.push_back(validMove);
+		}
+	}
+	printf("Best moves: { ");
+	for (int i = 0; i < minimaxMoves.size(); i++) {
+		cout << minimaxMoves[i].toString() << " ";
+	} printf("}\n");
+
+	after = wallClockTime();
+	long long totalTime = after - startTime;
+	printf("\n --- MASTER: Setup = %6.2f s, Comm = %6.2f s, Computation = %6.2f s, Collate = %6.2f s\n", 
+		setupTime / 1000000000.0, commTime / 1000000000.0, compTime / 1000000000.0, collateResultsTime / 1000000000.0);
+	printf("     [TOTAL TIME TAKEN: %6.2f s]\n\n", totalTime / 1000000000.0);
+
+	printf("======== JOB POOL MINIMAX MOVES END ========\n");
+
+	return minimaxMoves;
+}
+
+/**************** SEQUENTIAL ALGORITHMS ****************/
+
+// Assume game is not over, get the minimax moves
+vector<point> Solver::getMinimaxMoves(Board board, int player, int depth) {
+	vector<point> validMoves = board.getValidMoves(player);
+	if (validMoves.size() == 0) {
+		return vector<point>();
+	} else if (validMoves.size() == 1) {
+		return validMoves;
+	}
+	vector<point> minimaxMoves;
+
+	int value = (player == BLACK) ? INT_MIN : INT_MAX;
+	for (point validMove : validMoves) {
+		Board newBoard = board;
+		newBoard.makeMove(player, validMove.x, validMove.y);
+		int newValue = (player == BLACK) ? getMinValue(newBoard, OPP(player), depth - 1) :
+										   getMaxValue(newBoard, OPP(player), depth - 1);
+
+		if (player == BLACK && newValue > value) {
+			// Clear previous moves
+			value = newValue;
+			minimaxMoves.clear();
+			minimaxMoves.push_back(validMove);
+
+		} else if (player == WHITE && newValue < value) { 
+			// Clear previous moves
+			value = newValue;
+			minimaxMoves.clear();
+			minimaxMoves.push_back(validMove);
+
+		} else if (newValue == value) {
+			// Add on to a previous move with same value
+			minimaxMoves.push_back(validMove);
+		}
+
+		cout << "Current move = " << validMove.toString() << ". Value = " << newValue << endl;
+	}
 	return minimaxMoves;
 }
 

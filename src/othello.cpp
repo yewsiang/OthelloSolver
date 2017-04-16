@@ -6,6 +6,8 @@
 
 using namespace std;
 
+string ALGORITHM = "JOBPOOL_MINIMAX";//"PARALLEL_MINIMAX";
+
 int main(int argc, char** argv) {
 
 	MPI_Init(NULL, NULL);
@@ -21,10 +23,12 @@ int main(int argc, char** argv) {
 
 		// Setup the game
 		Game game = Game(cf);
-		game.play(numProcs);
+		game.play(ALGORITHM, numProcs);
 
 	} else {
-		slaveWaitForJob("PARALLEL_MINIMAX", id);
+		slaveWaitForJob(ALGORITHM, id);
+
+		printf("\nSLAVE %d FINALIZED\n", id);
 	}
 
 	MPI_Finalize();
