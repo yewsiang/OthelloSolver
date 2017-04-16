@@ -18,26 +18,50 @@ long long wallClockTime() {
 
 /******************************* JOB EXECUTION *******************************/
 
-// Compute the minimaxScores of each move of the board in a Job
-CompletedJob executeJob(Job* job) {
+// Compute the minimax of each move of the board in a Job
+CompletedJob executeMinimaxJob(Job* job) {
 	Solver solver = Solver(job->width, job->height, job->depthLeft, 
 		job->maxBoards, job->cornerValue, job->edgeValue);
 	int player = job->player;
 	int depth = job->depthLeft;
 	Board* currentBoard = job->board;
-	//int value = (player == BLACK) ? solver.getMaxValue(*currentBoard, player, depth) :
-	//								solver.getMinValue(*currentBoard, player, depth);
+	int value = (player == BLACK) ? solver.getMaxValue(*currentBoard, player, depth) :
+									solver.getMinValue(*currentBoard, player, depth);
+	CompletedJob cj = {job->id, job->parentId, player, value, solver.getBoardsSearched()};
+	return cj;
+}
+
+// Compute the minimax of each move of the board in a Job with alpha-beta pruning
+CompletedJob executeAlphaBetaJob(Job* job) {
+	Solver solver = Solver(job->width, job->height, job->depthLeft, 
+		job->maxBoards, job->cornerValue, job->edgeValue);
+	int player = job->player;
+	int depth = job->depthLeft;
+	Board* currentBoard = job->board;
 	int value = (player == BLACK) ? solver.getAlphaBetaMaxValue(INT_MIN, INT_MAX, *currentBoard, player, depth) :
 									solver.getAlphaBetaMinValue(INT_MIN, INT_MAX, *currentBoard, player, depth);
 	CompletedJob cj = {job->id, job->parentId, player, value, solver.getBoardsSearched()};
 	return cj;
 }
 
-vector<CompletedJob> executeAllJobs(vector<Job> job) {
+vector<CompletedJob> executeAllJobs(string algorithm, vector<Job> job) {
 	vector<CompletedJob> completedJobs;
-	for (int i = 0; i < job.size(); i++) {
-		CompletedJob cj = executeJob(&job[i]);
-		completedJobs.push_back(cj);
+
+	if (algorithm.compare("BATCH_MINIMAX") == 0 || 
+		algorithm.compare("JOBPOOL_MINIMAX") == 0) {
+
+		for (int i = 0; i < job.size(); i++) {
+			CompletedJob cj = executeMinimaxJob(&job[i]);
+			completedJobs.push_back(cj);
+		}
+
+	} else if (algorithm.compare("BATCH_ALPHABETA") == 0 ||
+	   algorithm.compare("JOBPOOL_ALPHABETA") == 0) {
+
+		for (int i = 0; i < job.size(); i++) {
+			CompletedJob cj = executeAlphaBetaJob(&job[i]);
+			completedJobs.push_back(cj);
+		}
 	}
 	return completedJobs;
 }
@@ -315,7 +339,7 @@ void slaveWaitForJob(string algorithm, int id) {
 
 	// Work on problems
 	before = wallClockTime();
-    vector<CompletedJob> completedJobs = executeAllJobs(jobsToWork);
+    vector<CompletedJob> completedJobs = executeAllJobs(algorithm, jobsToWork);
     after = wallClockTime();
 	compTime += after - before;
     /*for (int i = 0; i < completedJobs.size(); i++) {
@@ -333,7 +357,7 @@ void slaveWaitForJob(string algorithm, int id) {
 		id, commTime / 1000000000.0, compTime / 1000000000.0);
 }
 
-void masterWorkOnJobs(deque<Job>* jobs, deque<Board>* boards, deque<CompletedJob>* waitingJobs) {
+void masterWorkOnJobs(string algorithm, deque<Job>* jobs, deque<Board>* boards, deque<CompletedJob>* waitingJobs) {
 	//printf("TEST A\n");
 
 	// If no jobs, return
@@ -352,7 +376,7 @@ void masterWorkOnJobs(deque<Job>* jobs, deque<Board>* boards, deque<CompletedJob
 
 	//printf("TEST C, jobs->size(): %d\n", jobs->size());
 	
-    vector<CompletedJob> completedJobs = executeAllJobs(jobsToWork);
+    vector<CompletedJob> completedJobs = executeAllJobs(algorithm, jobsToWork);
     for (int i = 0; i < completedJobs.size(); i++) {
     	CompletedJob completedJob = completedJobs[i];
 		int id = completedJob.id;
@@ -437,7 +461,7 @@ void slaveRequestJob(string algorithm, int id) {
 
 	while (true) {
 
-		printf("   --- SLAVE %d REQUESTING FOR JOBS\n", id);
+		//printf("   --- SLAVE %d REQUESTING FOR JOBS\n", id);
 
 		int request = SLAVE_WANTS_JOBS;
 		MPI_Send(&request, 1, MPI_INT, 0, 0, MPI_COMM_WORLD);
@@ -446,7 +470,7 @@ void slaveRequestJob(string algorithm, int id) {
 		int response;
 		MPI_Recv(&response, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, &status);
 
-		printf("   --- SLAVE %d GETS RESPONSE\n", id);
+		//printf("   --- SLAVE %d GETS RESPONSE\n", id);
 
 		if (response == MASTER_SENDING_JOBS) {
 			// Receive Jobs from master
@@ -467,10 +491,10 @@ void slaveRequestJob(string algorithm, int id) {
 
 		    // Work on problems
 			before = wallClockTime();
-		    vector<CompletedJob> completedJobs = executeAllJobs(jobsToWork);
+		    vector<CompletedJob> completedJobs = executeAllJobs(algorithm, jobsToWork);
 		    after = wallClockTime();
 			compTime += after - before;
-			printf("      --- SLAVE %d EXECUTED JOBS\n", id);
+			//printf("      --- SLAVE %d EXECUTED JOBS\n", id);
 		    /*for (int i = 0; i < completedJobs.size(); i++) {
 	  			printf("Process %d finished Job %d with Parent %d [Value: %d]\n", 
 	  				id, completedJobs[i].id, completedJobs[i].parentId, completedJobs[i].moveValue);
@@ -483,7 +507,7 @@ void slaveRequestJob(string algorithm, int id) {
 			after = wallClockTime();
 			commTime += after - before;
 
-			printf("      --- SLAVE %d SENDING COMPLETED JOBS\n", id);
+			//printf("      --- SLAVE %d SENDING COMPLETED JOBS\n", id);
 			
 			// Return results to master
 			before = wallClockTime();

@@ -56,8 +56,9 @@ typedef struct {
 long long wallClockTime();
 
 // Job-specific functions
-CompletedJob executeJob(Job* job);
-vector<CompletedJob> executeAllJobs(vector<Job>* job);
+CompletedJob executeMinimaxJob(Job* job);
+CompletedJob executeAlphaBetaJob(Job* job);
+vector<CompletedJob> executeAllJobs(string algorithm, vector<Job>* job);
 
 // Communications
 void masterInitialiseJobs(deque<Job>* jobs, deque<Board>* boards, deque<CompletedJob>* waitingJobs, 
@@ -69,7 +70,7 @@ void slaveWaitForJob(string algorithm, int id);
 void masterSendBatchJobs(deque<Job>* jobs, deque<Board>* boards, int numProcs);
 void masterSendJobs(deque<Job>* jobs, deque<Board>* boards, int id, int numJobs);
 void slaveReceiveJobs(vector<Job>* jobs);
-void masterWorkOnJobs(deque<Job>* jobs, deque<Board>* boards, deque<CompletedJob>* waitingJobs);
+void masterWorkOnJobs(string algorithm, deque<Job>* jobs, deque<Board>* boards, deque<CompletedJob>* waitingJobs);
 void slaveSendCompletedJobs(vector<CompletedJob>* jobs);
 void masterReceiveCompletedJobs(deque<CompletedJob>* jobs, int numProcs);
 void masterReceiveCompletedJobsFromSlave(deque<CompletedJob>* jobs, int id);

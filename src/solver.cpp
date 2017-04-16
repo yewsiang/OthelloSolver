@@ -66,7 +66,7 @@ vector<point> Solver::getParallelMinimaxMoves(Board board, int player, int depth
 
 	// Master to work on remaining Jobs
 	before = wallClockTime();
-	masterWorkOnJobs(&jobs, &boards, &waitingJobs);
+	masterWorkOnJobs("BATCH_MINIMAX", &jobs, &boards, &waitingJobs);
 	after = wallClockTime();
 	compTime += after - before;
 	printf(" --- MASTER FINISHED COMPUTATIONAL JOBS: Computation =%6.2f s\n", compTime / 1000000000.0);
@@ -186,7 +186,7 @@ vector<point> Solver::getJobPoolMinimaxMoves(Board board, int player, int depth,
 	int ongoingSlaves = 0;
 	int jobSize = 3;
 	while(jobs.size() > 0 || ongoingSlaves > 0) {
-		printf("   >>>> jobs.size(): %d, ongoingSlaves: %d", jobs.size(), ongoingSlaves);
+		//printf("   >>>> jobs.size(): %d, ongoingSlaves: %d", jobs.size(), ongoingSlaves);
 
 		MPI_Status status;
 		before = wallClockTime();
@@ -197,7 +197,7 @@ vector<point> Solver::getJobPoolMinimaxMoves(Board board, int player, int depth,
 
 		if (request == SLAVE_WANTS_JOBS && jobs.size() > 0) {
 
-			printf("   >>>> MASTER RECEIVED JOB REQUEST FROM %d\n", status.MPI_SOURCE);
+			//printf("   >>>> MASTER RECEIVED JOB REQUEST FROM %d\n", status.MPI_SOURCE);
 
 			// If there are Jobs, send those Jobs the Slaves are requesting for them
 			before = wallClockTime();
@@ -210,7 +210,7 @@ vector<point> Solver::getJobPoolMinimaxMoves(Board board, int player, int depth,
 
 		} else if (request == SLAVE_WANTS_JOBS && jobs.size() <= 0) {
 
-			printf("   >>>> MASTER RECEIVED JOB REQUEST FROM %d BUT NO JOBS\n", status.MPI_SOURCE);
+			//printf("   >>>> MASTER RECEIVED JOB REQUEST FROM %d BUT NO JOBS\n", status.MPI_SOURCE);
 
 			// If there are no more Jobs, inform the Slaves so that they will terminate
 			before = wallClockTime();
@@ -221,7 +221,7 @@ vector<point> Solver::getJobPoolMinimaxMoves(Board board, int player, int depth,
 
 		} else if (request == SLAVE_SENDING_JOBS) {
 
-			printf("   >>>> SLAVE %d SENDING COMPLETED JOBS\n", status.MPI_SOURCE);
+			//printf("   >>>> SLAVE %d SENDING COMPLETED JOBS\n", status.MPI_SOURCE);
 
 			// Collect results from Slaves
 			before = wallClockTime();
