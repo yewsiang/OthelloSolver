@@ -1,0 +1,6 @@
+
+Size: 8,10
+White: { d5,e6 }
+Black: { e5,d6 }
+Color: White
+Timeout: 10

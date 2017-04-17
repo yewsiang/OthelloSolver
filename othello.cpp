@@ -58,13 +58,13 @@ string JOB_DISTRIBUTION = "RANDOM";
  *
  * This value is capped at 100 to prevent excessive splitting.
  */
-#define NUM_JOBS_PER_PROC 10
+#define NUM_JOBS_PER_PROC 1
 
 /*
  * (Only applicable for JOBPOOL_MINIMAX / JOBPOOL_ALPHABETA algorithms)
  * This is the number of boards to send per Job request by Slave processors.
  */
-#define JOBPOOL_SEND_SIZE 3
+#define JOBPOOL_SEND_SIZE 1
 /****************************************************************************************/
 
 
@@ -87,8 +87,6 @@ int main(int argc, char** argv) {
 
 		// Initialize solver
 		Solver solver = Solver(cf);
-
-		board.printBoard(currentPlayer);
 
 		// Master acts differently depending on algorithm
 		/************************* SERIAL *************************/
@@ -113,16 +111,6 @@ int main(int argc, char** argv) {
 				JOB_DISTRIBUTION, NUM_JOBS_PER_PROC, JOBPOOL_SEND_SIZE);
 		}
 
-		cout << endl;
-		cout << "Number of Processors: " << numProcs << endl;
-		cout << "Algorithm: " << ALGORITHM << endl;
-	  	cout << "Job distribution: " << JOB_DISTRIBUTION << endl;
-	  	cout << "Number of Jobs per Processor: " << NUM_JOBS_PER_PROC << endl;
-	  	cout << "Job Pool Send size: " << JOBPOOL_SEND_SIZE << endl << endl;
-
-		cout << "Number of boards assessed: " << solver.getBoardsSearched() << endl;
-		cout << "Entire Space: " << (solver.getSearchedEntireSpace() ? "true" : "false") << endl;
-
 	} else {
 
 		// Slave process acts differently depending on algorithm
@@ -144,9 +132,7 @@ int main(int argc, char** argv) {
 		} else if (ALGORITHM.compare("JOBPOOL_MINIMAX") == 0 ||
 				   ALGORITHM.compare("JOBPOOL_ALPHABETA") == 0) {
 			slaveRequestJob(ALGORITHM, id);
-		} 
-
-		//printf("  [SLAVE %d FINALIZED]\n", id);
+		}
 	}
 
 	MPI_Finalize();
