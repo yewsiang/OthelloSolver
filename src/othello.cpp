@@ -36,7 +36,7 @@ using namespace std;
  *    be evaluated using the minimax alpha-beta pruning algorithm.
  *
  */
-string ALGORITHM = "JOBPOOL_ALPHABETA";
+string ALGORITHM = "BATCH_ALPHABETA";
 
 /*
  * This is the method that will be used to choose boards to send to the Slave processors.
@@ -76,8 +76,6 @@ int main(int argc, char** argv) {
   	MPI_Comm_rank(MPI_COMM_WORLD, &id);
 
   	if (id == 0) {
-  		cout << "Number of Processors: " << numProcs << endl;
-
 		// Retrieve configurations
 		Config cf = Config(argv[1], argv[2]);
 
@@ -89,6 +87,8 @@ int main(int argc, char** argv) {
 
 		// Initialize solver
 		Solver solver = Solver(cf);
+
+		board.printBoard(currentPlayer);
 
 		// Master acts differently depending on algorithm
 		/************************* SERIAL *************************/
@@ -112,6 +112,13 @@ int main(int argc, char** argv) {
 			solver.getJobPoolMoves(board, currentPlayer, maxDepth, numProcs, 
 				JOB_DISTRIBUTION, NUM_JOBS_PER_PROC, JOBPOOL_SEND_SIZE);
 		}
+
+		cout << endl;
+		cout << "Number of Processors: " << numProcs << endl;
+		cout << "Algorithm: " << ALGORITHM << endl;
+	  	cout << "Job distribution: " << JOB_DISTRIBUTION << endl;
+	  	cout << "Number of Jobs per Processor: " << NUM_JOBS_PER_PROC << endl;
+	  	cout << "Job Pool Send size: " << JOBPOOL_SEND_SIZE << endl << endl;
 
 		cout << "Number of boards assessed: " << solver.getBoardsSearched() << endl;
 		cout << "Entire Space: " << (solver.getSearchedEntireSpace() ? "true" : "false") << endl;
@@ -139,7 +146,7 @@ int main(int argc, char** argv) {
 			slaveRequestJob(ALGORITHM, id);
 		} 
 
-		printf("  [SLAVE %d FINALIZED]\n", id);
+		//printf("  [SLAVE %d FINALIZED]\n", id);
 	}
 
 	MPI_Finalize();

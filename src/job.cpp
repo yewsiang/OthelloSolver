@@ -66,7 +66,7 @@ vector<CompletedJob> executeAllJobs(string algorithm, vector<Job> job) {
 	return completedJobs;
 }
 
-/*********************************** BATCH ***********************************/
+/********************************** GENERAL **********************************/
 
 void masterInitialiseJobs(deque<Job>* jobs, deque<Board>* boards, deque<CompletedJob>* waitingJobs, 
 	vector<point> validMoves, Board board, int player, int depth, int maxBoards, int cornerValue, int edgeValue) {
@@ -155,12 +155,7 @@ void splitJobs(deque<Job>* jobs, deque<Board>* boards, deque<CompletedJob>* wait
 }
 
 void masterSendBatchJobs(deque<Job>* jobs, deque<Board>* boards, int numProcs, string jobDistribution) {
-	printf("==== MASTER SENDING JOBS =========\n");
-
 	int numJobs = jobs->size();
-
-	//printf("NUMJOBS: %d\n", numJobs);
-
 	int jobsAllocated = 0;
 	for (int i = 1; i < numProcs; i++) {
 		int problemSize = floor(numJobs * (i + 1) / numProcs) - floor(numJobs * i / numProcs);
@@ -168,13 +163,11 @@ void masterSendBatchJobs(deque<Job>* jobs, deque<Board>* boards, int numProcs, s
 
 		masterSendJobs(jobs, boards, i, problemSize, jobDistribution);
 	}
-
-	printf("==== MASTER SENDING JOBS ENDS ====\n");
 }
 
 void masterSendJobs(deque<Job>* jobs, deque<Board>* boards, int id, 
 	int jobSize, string jobDistribution) {
-	printf("==== MASTER SENDING JOBS =========\n");
+	printf("==== MASTER SENDING %d JOBS =========\n", id);
 
 	// Determine whether jobs to be sent are chosen randomly or sequentially
 	bool randomizeJobDistribution = (jobDistribution.compare("RANDOM") == 0);
@@ -247,14 +240,9 @@ void slaveReceiveJobs(vector<Job>* jobs) {
 	MPI_Get_count(&status, MPI_BYTE, &incomingSize);
 	jobs->resize(incomingSize / sizeof(Job));
 
-	//printf("[A]\n");
-
 	// Receive configuration information of Jobs
 	MPI_Recv((void*)jobs->data(), incomingSize, MPI_BYTE, 0, 0, MPI_COMM_WORLD, 
 		MPI_STATUS_IGNORE);
-
-	//printf("[B]\n");
-	//printf("incomingSize: %d\n", incomingSize);
 
 	// If no incoming Jobs, simply return
 	if (incomingSize == 0) {
@@ -265,8 +253,6 @@ void slaveReceiveJobs(vector<Job>* jobs) {
 	int width = jobs->front().width;
 	int height = jobs->front().height;
 	for (int k = 0; k < jobs->size(); k++) {
-
-		//printf("[C] K: %d\n", k);
 
 		Job* currentJob = &((*jobs)[k]);
 		Board* newBoard = new Board(width, height);
@@ -301,24 +287,12 @@ void slaveWaitForJob(string algorithm, int id) {
 	slaveReceiveJobs(&jobsToWork);
 	after = wallClockTime();
 	commTime += after - before;
-    /*printf("Process %d received jobs from process 0:\n", id);
-    for (int i = 0; i < jobsToWork.size(); i++) {
-    	Job currentJob = jobsToWork[i];
-    	Board currentBoard = *(currentJob.board);
-
-    	printf("ID: %d [PLAYER: %d][LEFT: %d] \n", 
-			currentJob.id, currentJob.player, currentJob.depthLeft);
-    }*/
 
 	// Work on problems
 	before = wallClockTime();
     vector<CompletedJob> completedJobs = executeAllJobs(algorithm, jobsToWork);
     after = wallClockTime();
 	compTime += after - before;
-    /*for (int i = 0; i < completedJobs.size(); i++) {
-			printf("Process %d finished Job %d with Parent %d [Value: %d]\n", 
-				id, completedJobs[i].id, completedJobs[i].parentId, completedJobs[i].moveValue);
-		}*/
 	
 	// Return results to master
 	before = wallClockTime();
@@ -331,14 +305,10 @@ void slaveWaitForJob(string algorithm, int id) {
 }
 
 void masterWorkOnJobs(string algorithm, deque<Job>* jobs, deque<Board>* boards, deque<CompletedJob>* waitingJobs) {
-	//printf("TEST A\n");
-
 	// If no jobs, return
 	if (int(jobs->size()) < 1) {
 		return;
 	}
-
-	//printf("TEST B, jobs->size(): %d\n", jobs->size());
 
 	vector<Job> jobsToWork;
 	for (int i = 0; i < jobs->size(); i++) {
@@ -346,8 +316,6 @@ void masterWorkOnJobs(string algorithm, deque<Job>* jobs, deque<Board>* boards, 
 		job.board = &(*boards)[i];
 		jobsToWork.push_back(job);
 	}
-
-	//printf("TEST C, jobs->size(): %d\n", jobs->size());
 	
     vector<CompletedJob> completedJobs = executeAllJobs(algorithm, jobsToWork);
     for (int i = 0; i < completedJobs.size(); i++) {
@@ -358,9 +326,6 @@ void masterWorkOnJobs(string algorithm, deque<Job>* jobs, deque<Board>* boards, 
 
 		(*waitingJobs)[id].moveValue = moveValue;
 		(*waitingJobs)[id].boardsAssessed += boardsAssessed;
-
-		//printf("Process 0 finished Job %d with Parent %d [Value: %d]\n", 
-		//	completedJobs[i].id, completedJobs[i].parentId, completedJobs[i].moveValue);
 	}
 }
 
@@ -433,17 +398,12 @@ void slaveRequestJob(string algorithm, int id) {
 	long long before, after;
 
 	while (true) {
-
-		//printf("   --- SLAVE %d REQUESTING FOR JOBS\n", id);
-
 		int request = SLAVE_WANTS_JOBS;
 		MPI_Send(&request, 1, MPI_INT, 0, 0, MPI_COMM_WORLD);
 
 		MPI_Status status;
 		int response;
 		MPI_Recv(&response, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, &status);
-
-		//printf("   --- SLAVE %d GETS RESPONSE\n", id);
 
 		if (response == MASTER_SENDING_JOBS) {
 			// Receive Jobs from master
@@ -453,25 +413,11 @@ void slaveRequestJob(string algorithm, int id) {
 			after = wallClockTime();
 			commTime += after - before;
 
-		    /*printf("Process %d received jobs from process 0:\n", id);
-		    for (int i = 0; i < jobsToWork.size(); i++) {
-		    	Job currentJob = jobsToWork[i];
-		    	Board currentBoard = *(currentJob.board);
-
-		    	printf("ID: %d [PLAYER: %d][LEFT: %d] \n", 
-					currentJob.id, currentJob.player, currentJob.depthLeft);
-		    }*/
-
 		    // Work on problems
 			before = wallClockTime();
 		    vector<CompletedJob> completedJobs = executeAllJobs(algorithm, jobsToWork);
 		    after = wallClockTime();
 			compTime += after - before;
-			//printf("      --- SLAVE %d EXECUTED JOBS\n", id);
-		    /*for (int i = 0; i < completedJobs.size(); i++) {
-	  			printf("Process %d finished Job %d with Parent %d [Value: %d]\n", 
-	  				id, completedJobs[i].id, completedJobs[i].parentId, completedJobs[i].moveValue);
-	  		}*/
 
 			// Request to send Completed Jobs back to Master
 			before = wallClockTime();
@@ -479,8 +425,6 @@ void slaveRequestJob(string algorithm, int id) {
 			MPI_Send(&request, 1, MPI_INT, 0, 0, MPI_COMM_WORLD);
 			after = wallClockTime();
 			commTime += after - before;
-
-			//printf("      --- SLAVE %d SENDING COMPLETED JOBS\n", id);
 			
 			// Return results to master
 			before = wallClockTime();
@@ -514,8 +458,6 @@ void masterRewindMinimaxStack(deque<CompletedJob>* jobs) {
 		int player = job.player;
 		int moveValue = job.moveValue;
 		int parentMoveValue = (*jobs)[parentId].moveValue;
-		//printf("REWIND [PARENT ID: %d] [PLAYER: %s] [VALUE: %d][PARENT VALUE: %d]\n",
-		//	parentId, (player == BLACK) ? "BLACK" : "WHITE", moveValue, parentMoveValue);
 		CompletedJob* parentJob = &((*jobs)[parentId]);
 		parentJob->boardsAssessed += job.boardsAssessed;
 
