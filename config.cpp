@@ -51,27 +51,6 @@ Config::Config(char* initialBoardFilename, char* paramsFilename) {
         	edgeValue = stoi(value);
         } 
     }
-
-    // Print Configurations
-    cout << endl << "(Initial Configurations)" << endl;
-
-    cout << "Size: " << getWidth() << "," << getHeight() << endl;
-    cout << "White: ";
-    for (point p: getWhiteStartingPositions()) {
-        cout << "[" << p.toString() << "]";
-    }
-    cout << endl << "Black: ";
-    for (point p: getBlackStartingPositions()) {
-        cout << "[" << p.toString() << "]";
-    }
-    cout << endl;
-    cout << "Color: " << ((getPlayer() == BLACK) ? "Black" : "White") << endl;
-    cout << "Timeout: " << getTimeout() << endl;
-
-    cout << "MaxDepth: " << getMaxDepth() << endl;
-    cout << "MaxBoards: " << getMaxBoards() << endl;
-    cout << "CornerValue: " << getCornerValue() << endl;
-    cout << "EdgeValue: " << getEdgeValue() << endl;
 }
 
 // Extract the points which are separated by commas

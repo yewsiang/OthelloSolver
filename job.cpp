@@ -159,7 +159,6 @@ void masterSendBatchJobs(deque<Job>* jobs, deque<Board>* boards, int numProcs, s
 	int jobsAllocated = 0;
 	for (int i = 1; i < numProcs; i++) {
 		int problemSize = floor(numJobs * (i + 1) / numProcs) - floor(numJobs * i / numProcs);
-		printf("For Processor %d, Problem size: %d\n", i, problemSize);
 
 		masterSendJobs(jobs, boards, i, problemSize, jobDistribution);
 	}
@@ -167,7 +166,6 @@ void masterSendBatchJobs(deque<Job>* jobs, deque<Board>* boards, int numProcs, s
 
 void masterSendJobs(deque<Job>* jobs, deque<Board>* boards, int id, 
 	int jobSize, string jobDistribution) {
-	printf("==== MASTER SENDING %d JOBS =========\n", id);
 
 	// Determine whether jobs to be sent are chosen randomly or sequentially
 	bool randomizeJobDistribution = (jobDistribution.compare("RANDOM") == 0);
@@ -227,7 +225,6 @@ void masterSendJobs(deque<Job>* jobs, deque<Board>* boards, int id,
 		}
 	}
 
-	printf("==== MASTER SENDING JOBS ENDS ====\n");
 }
 
 void slaveReceiveJobs(vector<Job>* jobs) {
@@ -279,29 +276,16 @@ void slaveReceiveJobs(vector<Job>* jobs) {
 
 void slaveWaitForJob(string algorithm, int id) {
 	// For timing purposes
-	long long before, after;
 	vector<Job> jobsToWork;
 
 	// Receive Jobs from master
-	before = wallClockTime();
 	slaveReceiveJobs(&jobsToWork);
-	after = wallClockTime();
-	commTime += after - before;
 
 	// Work on problems
-	before = wallClockTime();
     vector<CompletedJob> completedJobs = executeAllJobs(algorithm, jobsToWork);
-    after = wallClockTime();
-	compTime += after - before;
 	
 	// Return results to master
-	before = wallClockTime();
     slaveSendCompletedJobs(&completedJobs);
-    after = wallClockTime();
-	commTime += after - before;
-
-	printf(" --- SLAVE %2d FINISHED: Communication =%6.2f s; Computation =%6.2f s\n", 
-		id, commTime / 1000000000.0, compTime / 1000000000.0);
 }
 
 void masterWorkOnJobs(string algorithm, deque<Job>* jobs, deque<Board>* boards, deque<CompletedJob>* waitingJobs) {
@@ -394,8 +378,6 @@ void masterReceiveCompletedJobsFromSlave(deque<CompletedJob>* waitingJobs, int i
 
 // Receive Job requests from slaves and send some Jobs to slaves
 void slaveRequestJob(string algorithm, int id) {
-	// For timing purposes
-	long long before, after;
 
 	while (true) {
 		int request = SLAVE_WANTS_JOBS;
@@ -407,30 +389,18 @@ void slaveRequestJob(string algorithm, int id) {
 
 		if (response == MASTER_SENDING_JOBS) {
 			// Receive Jobs from master
-			before = wallClockTime();
 			vector<Job> jobsToWork;
 			slaveReceiveJobs(&jobsToWork);
-			after = wallClockTime();
-			commTime += after - before;
 
 		    // Work on problems
-			before = wallClockTime();
 		    vector<CompletedJob> completedJobs = executeAllJobs(algorithm, jobsToWork);
-		    after = wallClockTime();
-			compTime += after - before;
 
 			// Request to send Completed Jobs back to Master
-			before = wallClockTime();
 	  		request = SLAVE_SENDING_JOBS;
 			MPI_Send(&request, 1, MPI_INT, 0, 0, MPI_COMM_WORLD);
-			after = wallClockTime();
-			commTime += after - before;
 			
 			// Return results to master
-			before = wallClockTime();
 		    slaveSendCompletedJobs(&completedJobs);
-		    after = wallClockTime();
-			commTime += after - before;
 
 		} else if (response == MASTER_NO_JOBS) {
 			break;
@@ -442,8 +412,6 @@ void slaveRequestJob(string algorithm, int id) {
 		}
 	}
 
-	printf(" --- SLAVE %2d FINISHED: Communication =%6.2f s; Computation =%6.2f s\n", 
-		id, commTime / 1000000000.0, compTime / 1000000000.0);
 }
 
 /*************************** COMBINATION OF RESULTS **************************/

@@ -1,5 +1,7 @@
 #include <iostream>
+#include <vector>
 #include <mpi.h>
+#include "point.h"
 #include "config.h"
 #include "job.h"
 
@@ -88,27 +90,37 @@ int main(int argc, char** argv) {
 		// Initialize solver
 		Solver solver = Solver(cf);
 
+		vector<point> validMoves;
 		// Master acts differently depending on algorithm
 		/************************* SERIAL *************************/
 		if (ALGORITHM.compare("SERIAL_MINIMAX") == 0) {
-			solver.getMinimaxMoves(board, currentPlayer, maxDepth);
+			validMoves = solver.getMinimaxMoves(board, currentPlayer, maxDepth);
 
 		} else if (ALGORITHM.compare("SERIAL_ALPHABETA") == 0) {
-			solver.getAlphaBetaMoves(board, currentPlayer, maxDepth);
+			validMoves = solver.getAlphaBetaMoves(board, currentPlayer, maxDepth);
 
 
 		/************** SENDING PROBLEMS AS A BATCH ***************/
 		} else if (ALGORITHM.compare("BATCH_MINIMAX") == 0 || 
 				   ALGORITHM.compare("BATCH_ALPHABETA") == 0) {
-			solver.getBatchMoves(board, currentPlayer, maxDepth, numProcs, 
+			validMoves = solver.getBatchMoves(board, currentPlayer, maxDepth, numProcs, 
 				ALGORITHM, JOB_DISTRIBUTION, NUM_JOBS_PER_PROC);
 
 
 		/********************** JOB POOLING ***********************/ 
 		} else if (ALGORITHM.compare("JOBPOOL_MINIMAX") == 0 ||
 				   ALGORITHM.compare("JOBPOOL_ALPHABETA") == 0) {
-			solver.getJobPoolMoves(board, currentPlayer, maxDepth, numProcs, 
+			validMoves = solver.getJobPoolMoves(board, currentPlayer, maxDepth, numProcs, 
 				JOB_DISTRIBUTION, NUM_JOBS_PER_PROC, JOBPOOL_SEND_SIZE);
+		}
+
+		if (validMoves.size() == 0) {
+			printf("Best moves: { na }");
+		} else {
+			printf("Best moves: { ");
+			for (int i = 0; i < validMoves.size(); i++) {
+				cout << validMoves[i].toString() << " ";
+			} printf("}\n");	
 		}
 
 	} else {

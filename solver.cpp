@@ -14,11 +14,6 @@ using namespace std;
  */
 vector<point> Solver::getBatchMoves(Board board, int player, int depth, int numProcs,
 	string algorithm, string jobDistribution, int numJobsPerProc) {
-	// Timing
-	long long startTime = wallClockTime();
-	long long before, after;
-	long long commTime = 0;	// Communication
-	long long compTime = 0; // Computation
 
 	vector<point> validMoves = board.getValidMoves(player);
 	if (validMoves.size() == 0) {
@@ -31,41 +26,23 @@ vector<point> Solver::getBatchMoves(Board board, int player, int depth, int numP
 	deque<Job> jobs;
 	deque<Board> boards;
 	deque<CompletedJob> waitingJobs;
-	before = wallClockTime();
 	masterInitialiseJobs(&jobs, &boards, &waitingJobs, validMoves, 
 		board, player, depth, maxBoards, cornerValue, edgeValue);
 
 	// Split original Jobs into more Jobs before sending to divide more evenly
-	printf("=== Problem Size BEFORE splitting: %lu ===\n", jobs.size());
 	splitJobs(&jobs, &boards, &waitingJobs, numProcs, numJobsPerProc);
-	after = wallClockTime();
-	compTime += after - before;
-	printf("=== Problem Size AFTER splitting: %lu ===\n", jobs.size());
 
 	// Send Jobs to Slaves
-	before = wallClockTime();
 	masterSendBatchJobs(&jobs, &boards, numProcs, jobDistribution);
-	after = wallClockTime();
-	commTime += after - before;
 
 	// Master to work on remaining Jobs
-	before = wallClockTime();
 	masterWorkOnJobs(algorithm, &jobs, &boards, &waitingJobs);
-	after = wallClockTime();
-	compTime += after - before;
-	printf(" --- MASTER FINISHED COMPUTATIONAL JOBS: Computation =%6.2f s\n", compTime / 1000000000.0);
 
 	// Collect results from Slaves
-	before = wallClockTime();
 	masterReceiveCompletedJobs(&waitingJobs, numProcs);
-	after = wallClockTime();
-	commTime += after - before;
 
 	// Combine results from Slave processes
-	before = wallClockTime();
 	masterRewindMinimaxStack(&waitingJobs);
-	after = wallClockTime();
-	compTime += after - before;
 
 	// Get the best moves
 	vector<point> minimaxMoves;
@@ -92,27 +69,12 @@ vector<point> Solver::getBatchMoves(Board board, int player, int depth, int numP
 			minimaxMoves.push_back(validMove);
 		}
 	}
-
-	after = wallClockTime();
-	long long totalTime = after - startTime;
-	printf("\n --- MASTER: Commmunication = %6.2f s, Computation = %6.2f s\n", commTime / 1000000000.0, compTime / 1000000000.0);
-	printf("     [TOTAL TIME TAKEN: %6.2f s]\n\n", totalTime / 1000000000.0);
-
-	printf("Best moves: { ");
-	for (int i = 0; i < minimaxMoves.size(); i++) {
-		cout << minimaxMoves[i].toString() << " ";
-	} printf("}\n");
 
 	return minimaxMoves;
 }
 
 vector<point> Solver::getJobPoolMoves(Board board, int player, int depth, int numProcs, 
 	string jobDistribution, int numJobsPerProc, int jobPoolSendSize) {
-	// Timing
-	long long startTime = wallClockTime();
-	long long before, after;
-	long long commTime = 0;	// Communication
-	long long compTime = 0; // Computation
 
 	vector<point> validMoves = board.getValidMoves(player);
 	if (validMoves.size() == 0) {
@@ -125,73 +87,50 @@ vector<point> Solver::getJobPoolMoves(Board board, int player, int depth, int nu
 	deque<Job> jobs;
 	deque<Board> boards;
 	deque<CompletedJob> waitingJobs;
-	before = wallClockTime();
 	masterInitialiseJobs(&jobs, &boards, &waitingJobs, validMoves, 
 		board, player, depth, maxBoards, cornerValue, edgeValue);
 
 	// Split original Jobs into more Jobs before sending to divide more evenly
-	printf("=== Problem Size BEFORE splitting: %lu ===\n", jobs.size());
 	splitJobs(&jobs, &boards, &waitingJobs, numProcs, numJobsPerProc);
-	after = wallClockTime();
-	compTime += after - before;
-	printf("=== Problem Size AFTER splitting: %lu ===\n", jobs.size());
 
 	// Handle Job requests from Slave processes
 	int ongoingSlaves = 0;
 	while(jobs.size() > 0 || ongoingSlaves > 0) {
 
 		MPI_Status status;
-		before = wallClockTime();
 		int request;
 		MPI_Recv(&request, 1, MPI_INT, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, &status);
-		after = wallClockTime();
-		commTime += after - before;
 
 		if (request == SLAVE_WANTS_JOBS && jobs.size() > 0) {
 
 			// If there are Jobs, send those Jobs the Slaves are requesting for them
-			before = wallClockTime();
 			int response = MASTER_SENDING_JOBS;
 			MPI_Send(&response, 1, MPI_INT, status.MPI_SOURCE, 0, MPI_COMM_WORLD);
 			masterSendJobs(&jobs, &boards, status.MPI_SOURCE, jobPoolSendSize, jobDistribution);
 			ongoingSlaves++;
-			after = wallClockTime();
-			commTime += after - before;
 
 		} else if (request == SLAVE_WANTS_JOBS && jobs.size() <= 0) {
 
 			// If there are no more Jobs, inform the Slaves so that they will terminate
-			before = wallClockTime();
 			int response = MASTER_NO_JOBS;
 			MPI_Send(&response, 1, MPI_INT, status.MPI_SOURCE, 0, MPI_COMM_WORLD);
-			after = wallClockTime();
-			commTime += after - before;
 
 		} else if (request == SLAVE_SENDING_JOBS) {
 
 			// Collect results from Slaves
-			before = wallClockTime();
 			masterReceiveCompletedJobsFromSlave(&waitingJobs, status.MPI_SOURCE);
 			ongoingSlaves--;
-			after = wallClockTime();
-			commTime += after - before;
 		}
 	}
 	// Tell the last Slave to stop working
-	before = wallClockTime();
 	MPI_Status status;
 	int request;
 	int response = MASTER_NO_JOBS;
 	MPI_Recv(&request, 1, MPI_INT, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, &status);
 	MPI_Send(&response, 1, MPI_INT, status.MPI_SOURCE, 0, MPI_COMM_WORLD);
-	after = wallClockTime();
-	commTime += after - before;
 
 	// Combine results from Slave processes
-	before = wallClockTime();
 	masterRewindMinimaxStack(&waitingJobs);
-	after = wallClockTime();
-	compTime += after - before;
 
 	// Get the best moves
 	vector<point> minimaxMoves;
@@ -218,16 +157,6 @@ vector<point> Solver::getJobPoolMoves(Board board, int player, int depth, int nu
 			minimaxMoves.push_back(validMove);
 		}
 	}
-
-	after = wallClockTime();
-	long long totalTime = after - startTime;
-	printf("\n --- MASTER: Commmunication = %6.2f s, Computation = %6.2f s\n", commTime / 1000000000.0, compTime / 1000000000.0);
-	printf("     [TOTAL TIME TAKEN: %6.2f s]\n\n", totalTime / 1000000000.0);
-
-	printf("Best moves: { ");
-	for (int i = 0; i < minimaxMoves.size(); i++) {
-		cout << minimaxMoves[i].toString() << " ";
-	} printf("}\n");
 
 	return minimaxMoves;
 }
@@ -272,15 +201,6 @@ vector<point> Solver::getMinimaxMoves(Board board, int player, int depth) {
 			minimaxMoves.push_back(validMove);
 		}
 	}
-
-	printf("Best moves: { ");
-	for (int i = 0; i < minimaxMoves.size(); i++) {
-		cout << minimaxMoves[i].toString() << " ";
-	} printf("}\n");
-
-	after = wallClockTime();
-	long long totalTime = after - startTime;
-	printf("     [TOTAL TIME TAKEN: %6.2f s]\n\n", totalTime / 1000000000.0);
 
 	return minimaxMoves;
 }
@@ -375,15 +295,6 @@ vector<point> Solver::getAlphaBetaMoves(Board board, int player, int depth) {
 			minimaxMoves.push_back(validMove);
 		}
 	}
-
-	printf("Best moves: { ");
-	for (int i = 0; i < minimaxMoves.size(); i++) {
-		cout << minimaxMoves[i].toString() << " ";
-	} printf("}\n");
-
-	after = wallClockTime();
-	long long totalTime = after - startTime;
-	printf("     [TOTAL TIME TAKEN: %6.2f s]\n\n", totalTime / 1000000000.0);
 
 	return minimaxMoves;
 }
