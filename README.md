@@ -1,5 +1,5 @@
 # Othello Solver
-NUS CS3211 Project: Parallel solver for Othello / Reversi
+NUS CS3211 Project: Parallel solver for Othello / Reversi using OpenMPI
 
 This solver evaluates the best move for a current board position and for a specified player using either the minimax algorithm or minimax with alpha-beta pruning algorithm.
 The algorithm, the parallelization method (batch or job pooling) and the other parameters that the solver uses can be customised in the `src/othello.cpp` file.
