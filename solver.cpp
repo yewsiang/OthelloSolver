@@ -41,11 +41,11 @@ vector<point> Solver::getBatchMoves(Board board, int player, int depth, int numP
 		board, player, depth, maxBoards, cornerValue, edgeValue);
 
 	// Split original Jobs into more Jobs before sending to divide more evenly
-	printf("=== Problem Size BEFORE splitting: %lu ===\n", jobs.size());
+	//printf("=== Problem Size BEFORE splitting: %lu ===\n", jobs.size());
 	splitJobs(&jobs, &boards, &waitingJobs, numProcs, numJobsPerProc);
 	after = wallClockTime();
 	compTime += after - before;
-	printf("=== Problem Size AFTER splitting: %lu ===\n", jobs.size());
+	//printf("=== Problem Size AFTER splitting: %lu ===\n", jobs.size());
 
 	// Send Jobs to Slaves
 	before = wallClockTime();
@@ -58,7 +58,7 @@ vector<point> Solver::getBatchMoves(Board board, int player, int depth, int numP
 	masterWorkOnJobs(algorithm, &jobs, &boards, &waitingJobs);
 	after = wallClockTime();
 	compTime += after - before;
-	printf(" --- MASTER FINISHED COMPUTATIONAL JOBS: Computation =%6.2f s\n", compTime / 1000000000.0);
+	//printf(" --- MASTER FINISHED COMPUTATIONAL JOBS: Computation =%6.2f s\n", compTime / 1000000000.0);
 
 	// Collect results from Slaves
 	before = wallClockTime();
@@ -100,8 +100,8 @@ vector<point> Solver::getBatchMoves(Board board, int player, int depth, int numP
 
 	after = wallClockTime();
 	long long totalTime = after - startTime;
-	printf("\n --- MASTER: Commmunication = %6.2f s, Computation = %6.2f s\n", commTime / 1000000000.0, compTime / 1000000000.0);
-	printf("     [TOTAL TIME TAKEN: %6.2f s]\n\n", totalTime / 1000000000.0);
+	//printf("\n --- MASTER: Commmunication = %6.2f s, Computation = %6.2f s\n", commTime / 1000000000.0, compTime / 1000000000.0);
+	//printf("     [TOTAL TIME TAKEN: %6.2f s]\n\n", totalTime / 1000000000.0);
 
 	return minimaxMoves;
 }
@@ -132,11 +132,11 @@ vector<point> Solver::getJobPoolMoves(Board board, int player, int depth, int nu
 		board, player, depth, maxBoards, cornerValue, edgeValue);
 
 	// Split original Jobs into more Jobs before sending to divide more evenly
-	printf("=== Problem Size BEFORE splitting: %lu ===\n", jobs.size());
+	//printf("=== Problem Size BEFORE splitting: %lu ===\n", jobs.size());
 	splitJobs(&jobs, &boards, &waitingJobs, numProcs, numJobsPerProc);
 	after = wallClockTime();
 	compTime += after - before;
-	printf("=== Problem Size AFTER splitting: %lu ===\n", jobs.size());
+	//printf("=== Problem Size AFTER splitting: %lu ===\n", jobs.size());
 
 	// Handle Job requests from Slave processes
 	int ongoingSlaves = 0;
@@ -223,8 +223,8 @@ vector<point> Solver::getJobPoolMoves(Board board, int player, int depth, int nu
 
 	after = wallClockTime();
 	long long totalTime = after - startTime;
-	printf("\n --- MASTER: Commmunication = %6.2f s, Computation = %6.2f s\n", commTime / 1000000000.0, compTime / 1000000000.0);
-	printf("     [TOTAL TIME TAKEN: %6.2f s]\n\n", totalTime / 1000000000.0);
+	//printf("\n --- MASTER: Commmunication = %6.2f s, Computation = %6.2f s\n", commTime / 1000000000.0, compTime / 1000000000.0);
+	//printf("     [TOTAL TIME TAKEN: %6.2f s]\n\n", totalTime / 1000000000.0);
 
 	return minimaxMoves;
 }
@@ -272,7 +272,7 @@ vector<point> Solver::getMinimaxMoves(Board board, int player, int depth) {
 
 	after = wallClockTime();
 	long long totalTime = after - startTime;
-	printf("     [TOTAL TIME TAKEN: %6.2f s]\n\n", totalTime / 1000000000.0);
+	//printf("     [TOTAL TIME TAKEN: %6.2f s]\n\n", totalTime / 1000000000.0);
 
 	return minimaxMoves;
 }
@@ -370,7 +370,7 @@ vector<point> Solver::getAlphaBetaMoves(Board board, int player, int depth) {
 
 	after = wallClockTime();
 	long long totalTime = after - startTime;
-	printf("     [TOTAL TIME TAKEN: %6.2f s]\n\n", totalTime / 1000000000.0);
+	//printf("     [TOTAL TIME TAKEN: %6.2f s]\n\n", totalTime / 1000000000.0);
 
 	return minimaxMoves;
 }

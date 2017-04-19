@@ -53,7 +53,7 @@ Config::Config(char* initialBoardFilename, char* paramsFilename) {
     }
 
     // Print Configurations
-    cout << endl << "(Initial Configurations)" << endl;
+    /*cout << endl << "(Initial Configurations)" << endl;
 
     cout << "Size: " << getWidth() << "," << getHeight() << endl;
     cout << "White: ";
@@ -71,7 +71,7 @@ Config::Config(char* initialBoardFilename, char* paramsFilename) {
     cout << "MaxDepth: " << getMaxDepth() << endl;
     cout << "MaxBoards: " << getMaxBoards() << " (Not used)" << endl;
     cout << "CornerValue: " << getCornerValue() << endl;
-    cout << "EdgeValue: " << getEdgeValue() << endl;
+    cout << "EdgeValue: " << getEdgeValue() << endl;*/
 }
 
 // Extract the points which are separated by commas

@@ -165,7 +165,7 @@ void masterSendBatchJobs(deque<Job>* jobs, deque<Board>* boards, int numProcs, s
 	int jobsAllocated = 0;
 	for (int i = 1; i < numProcs; i++) {
 		int problemSize = floor(numJobs * (i + 1) / numProcs) - floor(numJobs * i / numProcs);
-		printf("For Processor %d, Problem size: %d\n", i, problemSize);
+		//printf("For Processor %d, Problem size: %d\n", i, problemSize);
 
 		masterSendJobs(jobs, boards, i, problemSize, jobDistribution);
 	}
@@ -309,8 +309,8 @@ void slaveWaitForJob(string algorithm, int id) {
 		commTime += after - before;
 	}
 
-	printf(" --- SLAVE %2d FINISHED: Communication =%6.2f s; Computation =%6.2f s\n", 
-		id, commTime / 1000000000.0, compTime / 1000000000.0);
+	//printf(" --- SLAVE %2d FINISHED: Communication =%6.2f s; Computation =%6.2f s\n", 
+	//	id, commTime / 1000000000.0, compTime / 1000000000.0);
 }
 
 void masterWorkOnJobs(string algorithm, deque<Job>* jobs, deque<Board>* boards, deque<CompletedJob>* waitingJobs) {
@@ -452,8 +452,8 @@ void slaveRequestJob(string algorithm, int id) {
 		}
 	}
 
-	printf(" --- SLAVE %2d FINISHED: Communication =%6.2f s; Computation =%6.2f s\n", 
-		id, commTime / 1000000000.0, compTime / 1000000000.0);
+	//printf(" --- SLAVE %2d FINISHED: Communication =%6.2f s; Computation =%6.2f s\n", 
+	//	id, commTime / 1000000000.0, compTime / 1000000000.0);
 }
 
 /*************************** COMBINATION OF RESULTS **************************/
