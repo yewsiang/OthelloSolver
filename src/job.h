@@ -61,6 +61,7 @@ CompletedJob executeAlphaBetaJob(Job* job);
 vector<CompletedJob> executeAllJobs(string algorithm, vector<Job>* job);
 
 // Communications
+void masterNotifySlaves(int numProcs, int action);
 void masterInitialiseJobs(deque<Job>* jobs, deque<Board>* boards, deque<CompletedJob>* waitingJobs, 
 	vector<point> validMoves, Board board, int player, int depth, int maxBoards, int cornerValue, int edgeValue);
 void splitJobs(deque<Job>* jobs, deque<Board>* boards, deque<CompletedJob>* waitingJobs,

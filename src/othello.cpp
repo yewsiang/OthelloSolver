@@ -36,7 +36,7 @@ using namespace std;
  *    be evaluated using the minimax alpha-beta pruning algorithm.
  *
  */
-string ALGORITHM = "BATCH_ALPHABETA";
+string ALGORITHM = "JOBPOOL_ALPHABETA";
 
 /*
  * This is the method that will be used to choose boards to send to the Slave processors.
@@ -58,13 +58,13 @@ string JOB_DISTRIBUTION = "RANDOM";
  *
  * This value is capped at 100 to prevent excessive splitting.
  */
-#define NUM_JOBS_PER_PROC 10
+#define NUM_JOBS_PER_PROC 1
 
 /*
  * (Only applicable for JOBPOOL_MINIMAX / JOBPOOL_ALPHABETA algorithms)
  * This is the number of boards to send per Job request by Slave processors.
  */
-#define JOBPOOL_SEND_SIZE 3
+#define JOBPOOL_SEND_SIZE 1
 /****************************************************************************************/
 
 
@@ -91,37 +91,46 @@ int main(int argc, char** argv) {
 		board.printBoard(currentPlayer);
 
 		// Master acts differently depending on algorithm
+		vector<point> validMoves;
 		/************************* SERIAL *************************/
 		if (ALGORITHM.compare("SERIAL_MINIMAX") == 0) {
-			solver.getMinimaxMoves(board, currentPlayer, maxDepth);
+			validMoves = solver.getMinimaxMoves(board, currentPlayer, maxDepth);
 
 		} else if (ALGORITHM.compare("SERIAL_ALPHABETA") == 0) {
-			solver.getAlphaBetaMoves(board, currentPlayer, maxDepth);
+			validMoves = solver.getAlphaBetaMoves(board, currentPlayer, maxDepth);
 
 
 		/************** SENDING PROBLEMS AS A BATCH ***************/
 		} else if (ALGORITHM.compare("BATCH_MINIMAX") == 0 || 
 				   ALGORITHM.compare("BATCH_ALPHABETA") == 0) {
-			solver.getBatchMoves(board, currentPlayer, maxDepth, numProcs, 
+			validMoves = solver.getBatchMoves(board, currentPlayer, maxDepth, numProcs, 
 				ALGORITHM, JOB_DISTRIBUTION, NUM_JOBS_PER_PROC);
 
 
 		/********************** JOB POOLING ***********************/ 
 		} else if (ALGORITHM.compare("JOBPOOL_MINIMAX") == 0 ||
 				   ALGORITHM.compare("JOBPOOL_ALPHABETA") == 0) {
-			solver.getJobPoolMoves(board, currentPlayer, maxDepth, numProcs, 
+			validMoves = solver.getJobPoolMoves(board, currentPlayer, maxDepth, numProcs, 
 				JOB_DISTRIBUTION, NUM_JOBS_PER_PROC, JOBPOOL_SEND_SIZE);
 		}
 
-		cout << endl;
+		// Print best moves
+		if (validMoves.size() == 0) {
+			cout << "Best moves: { na }";
+		} else {
+			cout << "Best moves: { ";
+			for (int i = 0; i < validMoves.size(); i++) {
+				cout << validMoves[i].toString() << " ";
+			} cout << "}" << endl;
+		}
+
+		/*cout << endl;
 		cout << "Number of Processors: " << numProcs << endl;
 		cout << "Algorithm: " << ALGORITHM << endl;
 	  	cout << "Job distribution: " << JOB_DISTRIBUTION << endl;
 	  	cout << "Number of Jobs per Processor: " << NUM_JOBS_PER_PROC << endl;
-	  	cout << "Job Pool Send size: " << JOBPOOL_SEND_SIZE << endl << endl;
-
-		cout << "Number of boards assessed: " << solver.getBoardsSearched() << endl;
-		cout << "Entire Space: " << (solver.getSearchedEntireSpace() ? "true" : "false") << endl;
+	  	cout << "Job Pool Send size: " << JOBPOOL_SEND_SIZE << endl;
+		cout << "Number of boards assessed: " << solver.getBoardsSearched() << endl << endl;*/
 
 	} else {
 
@@ -145,8 +154,6 @@ int main(int argc, char** argv) {
 				   ALGORITHM.compare("JOBPOOL_ALPHABETA") == 0) {
 			slaveRequestJob(ALGORITHM, id);
 		} 
-
-		//printf("  [SLAVE %d FINALIZED]\n", id);
 	}
 
 	MPI_Finalize();

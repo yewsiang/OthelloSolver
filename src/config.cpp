@@ -66,10 +66,10 @@ Config::Config(char* initialBoardFilename, char* paramsFilename) {
     }
     cout << endl;
     cout << "Color: " << ((getPlayer() == BLACK) ? "Black" : "White") << endl;
-    cout << "Timeout: " << getTimeout() << endl;
+    cout << "Timeout: " << getTimeout() << " (Not used)" << endl;
 
     cout << "MaxDepth: " << getMaxDepth() << endl;
-    cout << "MaxBoards: " << getMaxBoards() << endl;
+    cout << "MaxBoards: " << getMaxBoards() << " (Not used)" << endl;
     cout << "CornerValue: " << getCornerValue() << endl;
     cout << "EdgeValue: " << getEdgeValue() << endl;
 }

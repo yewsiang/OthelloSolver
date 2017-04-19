@@ -22,10 +22,15 @@ vector<point> Solver::getBatchMoves(Board board, int player, int depth, int numP
 
 	vector<point> validMoves = board.getValidMoves(player);
 	if (validMoves.size() == 0) {
+		masterNotifySlaves(numProcs, MASTER_NO_JOBS);
 		return vector<point>();
 	} else if (validMoves.size() == 1) {
+		masterNotifySlaves(numProcs, MASTER_NO_JOBS);
 		return validMoves;
 	}
+	
+	// Notify the Slaves that there are Jobs
+	masterNotifySlaves(numProcs, MASTER_SENDING_JOBS);
 
 	// Initialize jobs
 	deque<Job> jobs;
@@ -98,11 +103,6 @@ vector<point> Solver::getBatchMoves(Board board, int player, int depth, int numP
 	printf("\n --- MASTER: Commmunication = %6.2f s, Computation = %6.2f s\n", commTime / 1000000000.0, compTime / 1000000000.0);
 	printf("     [TOTAL TIME TAKEN: %6.2f s]\n\n", totalTime / 1000000000.0);
 
-	printf("Best moves: { ");
-	for (int i = 0; i < minimaxMoves.size(); i++) {
-		cout << minimaxMoves[i].toString() << " ";
-	} printf("}\n");
-
 	return minimaxMoves;
 }
 
@@ -116,8 +116,10 @@ vector<point> Solver::getJobPoolMoves(Board board, int player, int depth, int nu
 
 	vector<point> validMoves = board.getValidMoves(player);
 	if (validMoves.size() == 0) {
+		masterNotifySlaves(numProcs, MASTER_NO_JOBS);
 		return vector<point>();
 	} else if (validMoves.size() == 1) {
+		masterNotifySlaves(numProcs, MASTER_NO_JOBS);
 		return validMoves;
 	}
 
@@ -224,11 +226,6 @@ vector<point> Solver::getJobPoolMoves(Board board, int player, int depth, int nu
 	printf("\n --- MASTER: Commmunication = %6.2f s, Computation = %6.2f s\n", commTime / 1000000000.0, compTime / 1000000000.0);
 	printf("     [TOTAL TIME TAKEN: %6.2f s]\n\n", totalTime / 1000000000.0);
 
-	printf("Best moves: { ");
-	for (int i = 0; i < minimaxMoves.size(); i++) {
-		cout << minimaxMoves[i].toString() << " ";
-	} printf("}\n");
-
 	return minimaxMoves;
 }
 
@@ -272,11 +269,6 @@ vector<point> Solver::getMinimaxMoves(Board board, int player, int depth) {
 			minimaxMoves.push_back(validMove);
 		}
 	}
-
-	printf("Best moves: { ");
-	for (int i = 0; i < minimaxMoves.size(); i++) {
-		cout << minimaxMoves[i].toString() << " ";
-	} printf("}\n");
 
 	after = wallClockTime();
 	long long totalTime = after - startTime;
@@ -375,11 +367,6 @@ vector<point> Solver::getAlphaBetaMoves(Board board, int player, int depth) {
 			minimaxMoves.push_back(validMove);
 		}
 	}
-
-	printf("Best moves: { ");
-	for (int i = 0; i < minimaxMoves.size(); i++) {
-		cout << minimaxMoves[i].toString() << " ";
-	} printf("}\n");
 
 	after = wallClockTime();
 	long long totalTime = after - startTime;

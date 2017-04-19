@@ -2,5 +2,5 @@
 Size: 5,5
 White: { b2,c3,d2 }
 Black: { b3,c2,d3 }
-Color: White
+Color: Black
 Timeout: 10
