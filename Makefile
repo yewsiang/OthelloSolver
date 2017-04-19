@@ -1,12 +1,12 @@
 MPICC?=mpic++
 
-all: clean othello run
+all: othello
 
-othello: src/*.cpp 
-	${MPICC} -std=c++11 -o bin/othellox src/*.cpp 
+othello: *.cpp 
+	${MPICC} -std=c++11 -o othellox *.cpp 
 
 run:
-	mpirun -np 5 ./bin/othellox config/initialbrd10.txt config/evalparams.txt
+	mpirun -np 4 ./othellox initialbrd.txt evalparams.txt
 
 clean: 
-	#rm bin/othello
+	rm othellox

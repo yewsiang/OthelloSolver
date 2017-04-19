@@ -124,13 +124,13 @@ int main(int argc, char** argv) {
 			} cout << "}" << endl;
 		}
 
-		/*cout << endl;
+		cout << endl;
 		cout << "Number of Processors: " << numProcs << endl;
 		cout << "Algorithm: " << ALGORITHM << endl;
 	  	cout << "Job distribution: " << JOB_DISTRIBUTION << endl;
 	  	cout << "Number of Jobs per Processor: " << NUM_JOBS_PER_PROC << endl;
 	  	cout << "Job Pool Send size: " << JOBPOOL_SEND_SIZE << endl;
-		cout << "Number of boards assessed: " << solver.getBoardsSearched() << endl << endl;*/
+		cout << "Number of boards assessed: " << solver.getBoardsSearched() << endl << endl;
 
 	} else {
 

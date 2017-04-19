@@ -1,6 +1,0 @@
-
-Size: 4,4
-White: { c2,c4 }
-Black: { b3,b4 }
-Color: White
-Timeout: 10
